@@ -19,5 +19,19 @@
     "url": "https://github.com/devaanshkushwaha06",
     "correct_label": 0,
     "user_comment": "User confirmed analysis was correct"
+  },
+  {
+    "feedback_id": "fb_20260223_203438_008351",
+    "timestamp": "2026-02-23T20:34:38.008351",
+    "url": "https://www.confident-ai.com/blog/the-definitive-guide-to-synthetic-data-generation-using-llms",
+    "correct_label": 0,
+    "user_comment": "User confirmed analysis was correct"
+  },
+  {
+    "feedback_id": "fb_20260223_203550_911375",
+    "timestamp": "2026-02-23T20:35:50.911375",
+    "url": "http://paypa1.com",
+    "correct_label": 1,
+    "user_comment": "There is spoofing in the URL paypal, l is written to 1"
   }
 ]
