@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Phishing Detection System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>AI Phishing Detector</h1>
+            </div>
+            <div class="subtitle">
+                Hybrid Deep Learning + Heuristic Analysis
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- URL Input Section -->
+            <section class="input-section">
+                <div class="input-container">
+                    <label for="url-input" class="input-label">
+                        <i class="fas fa-link"></i>
+                        Enter URL to analyze
+                    </label>
+                    <div class="input-group">
+                        <input 
+                            type="url" 
+                            id="url-input" 
+                            placeholder="https://example.com" 
+                            class="url-input"
+                            autocomplete="off"
+                        >
+                        <button id="scan-btn" class="scan-button">
+                            <i class="fas fa-search"></i>
+                            <span class="button-text">Analyze</span>
+                        </button>
+                    </div>
+                    <div class="input-help">
+                        Enter any URL to check for phishing indicators using AI analysis
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading Section -->
+            <section class="loading-section" id="loading-section" style="display: none;">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Analyzing URL...</div>
+                    <div class="loading-details">
+                        <div class="analysis-step">🧠 Running deep learning analysis</div>
+                        <div class="analysis-step">🔍 Checking heuristic patterns</div>
+                        <div class="analysis-step">🌐 Querying threat intelligence</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="results-section" style="display: none;">
+                <div class="results-container">
+                    <!-- Risk Score Gauge -->
+                    <div class="risk-gauge-container">
+                        <div class="risk-gauge">
+                            <div class="gauge-circle">
+                                <div class="gauge-fill" id="gauge-fill"></div>
+                                <div class="gauge-center">
+                                    <div class="risk-score" id="risk-score">0</div>
+                                    <div class="risk-label">Risk Score</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="classification-badge" id="classification-badge">
+                            <i class="classification-icon" id="classification-icon"></i>
+                            <span class="classification-text" id="classification-text">Safe</span>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Results -->
+                    <div class="analysis-results">
+                        <div class="result-card">
+                            <div class="card-header">
+                                <i class="fas fa-globe"></i>
+                                <h3>URL Information</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="result-item">
+                                    <span class="label">URL:</span>
+                                    <span class="value" id="analyzed-url">-</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="label">Domain:</span>
+                                    <span class="value" id="analyzed-domain">-</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="label">Processing Time:</span>
+                                    <span class="value" id="processing-time">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="result-card">
+                            <div class="card-header">
+                                <i class="fas fa-chart-bar"></i>
+                                <h3>Analysis Breakdown</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="score-label">
+                                            <i class="fas fa-robot"></i>
+                                            Deep Learning
+                                        </div>
+                                        <div class="score-bar">
+                                            <div class="score-fill ml-score" id="ml-score-fill"></div>
+                                        </div>
+                                        <div class="score-value" id="ml-score-value">0%</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="score-label">
+                                            <i class="fas fa-cogs"></i>
+                                            Heuristic Rules  
+                                        </div>
+                                        <div class="score-bar">
+                                            <div class="score-fill heuristic-score" id="heuristic-score-fill"></div>
+                                        </div>
+                                        <div class="score-value" id="heuristic-score-value">0/40</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="score-label">
+                                            <i class="fas fa-shield"></i>
+                                            Threat Intel
+                                        </div>
+                                        <div class="score-bar">
+                                            <div class="score-fill api-score" id="api-score-fill"></div>
+                                        </div>
+                                        <div class="score-value" id="api-score-value">0/20</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="result-card">
+                            <div class="card-header">
+                                <i class="fas fa-info-circle"></i>
+                                <h3>Analysis Explanation</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="explanation-text" id="explanation-text">
+                                    Click "Analyze" to start URL analysis
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feedback Section -->
+                <div class="feedback-section" id="feedback-section" style="display: none;">
+                    <div class="feedback-container">
+                        <div class="feedback-header">
+                            <h3>Was this analysis correct?</h3>
+                            <p>Your feedback helps improve our AI model</p>
+                        </div>
+                        <div class="feedback-buttons">
+                            <button class="feedback-btn correct-btn" id="correct-btn">
+                                <i class="fas fa-check"></i>
+                                Correct
+                            </button>
+                            <button class="feedback-btn incorrect-btn" id="incorrect-btn">
+                                <i class="fas fa-times"></i>
+                                Incorrect
+                            </button>
+                        </div>
+                        <div class="feedback-form" id="feedback-form" style="display: none;">
+                            <div class="form-group">
+                                <label>What should be the correct classification?</label>
+                                <div class="radio-group">
+                                    <label class="radio-label">
+                                        <input type="radio" name="correct-label" value="0">
+                                        <span>Legitimate/Safe</span>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="correct-label" value="1">
+                                        <span>Phishing/Malicious</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="user-comment">Additional comments (optional):</label>
+                                <textarea 
+                                    id="user-comment" 
+                                    placeholder="Please explain why this classification is incorrect..."
+                                    rows="3"
+                                ></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button class="submit-feedback-btn" id="submit-feedback-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                    Submit Feedback
+                                </button>
+                                <button class="cancel-feedback-btn" id="cancel-feedback-btn">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                        <div class="feedback-success" id="feedback-success" style="display: none;">
+                            <i class="fas fa-check-circle"></i>
+                            <p>Thank you for your feedback! Our AI model will be improved.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>🛡️ Security Features</h4>
+                    <ul>
+                        <li>Deep Learning Classification</li>
+                        <li>Heuristic Pattern Analysis</li>
+                        <li>Real-time Threat Intelligence</li>
+                        <li>Continuous Model Improvement</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>⚡ Technology Stack</h4>
+                    <ul>
+                        <li>TensorFlow/Keras ML Models</li>
+                        <li>FastAPI Backend</li>
+                        <li>Hybrid Detection Engine</li>
+                        <li>Responsive Web Interface</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>📊 API Status</h4>
+                    <div class="api-status" id="api-status">
+                        <div class="status-indicator" id="status-indicator"></div>
+                        <span id="status-text">Checking...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 AI Phishing Detection System | Hackathon Project</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

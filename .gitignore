@@ -1,0 +1,328 @@
+# AI Phishing Detection System - Git Ignore File
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============================================================================
+# VIRTUAL ENVIRONMENTS
+# ============================================================================
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+conda-meta/
+
+# ============================================================================
+# ENVIRONMENT & CONFIGURATION
+# ============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+config.json
+secrets.json
+
+# ============================================================================
+# MACHINE LEARNING MODELS
+# ============================================================================
+models/*.h5
+models/*.pkl
+models/*.joblib
+models/*.bin
+models/checkpoints/
+models/logs/
+models/tensorboard/
+models/saved_models/
+
+# Keep metadata and training scripts
+!models/train_model.py
+!models/*.json
+!models/README.md
+
+# ============================================================================
+# DATASETS & DATA FILES
+# ============================================================================
+data/*.csv
+data/*.json
+data/*.parquet
+data/*.pickle
+data/raw/
+data/processed/
+data/cache/
+data/temp/
+
+# Keep example and structure files
+!data/README.md
+!data/.gitkeep
+!data/sample_*
+
+# ============================================================================
+# LOGS & MONITORING
+# ============================================================================
+logs/
+*.log
+*.log.*
+log/
+logging/
+*.out
+*.err
+
+# ============================================================================
+# JUPYTER NOTEBOOKS
+# ============================================================================
+.ipynb_checkpoints
+*.ipynb
+notebooks/
+
+# ============================================================================
+# TESTING
+# ============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ============================================================================
+# IDE & EDITORS
+# ============================================================================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ============================================================================
+# OPERATING SYSTEM
+# ============================================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# WEB & FRONTEND
+# ============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+.pnp.*
+
+# Frontend build outputs
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.nuxt/
+
+# ============================================================================
+# APIs & EXTERNAL SERVICES
+# ============================================================================
+# API keys and secrets
+*_api_key*
+*_secret*
+*_token*
+credentials.json
+service_account.json
+
+# ============================================================================
+# DEPLOYMENT
+# ============================================================================
+# Docker
+Dockerfile.dev
+docker-compose.override.yml
+.dockerignore
+*.tar
+*.gz
+
+# Kubernetes
+k8s-config/
+kubernetes/secrets/
+
+# Cloud deployment
+.vercel
+.netlify
+.railway
+
+# ============================================================================
+# PERFORMANCE & PROFILING
+# ============================================================================
+.prof
+*.prof
+.benchmarks/
+profiling/
+
+# ============================================================================
+# TEMPORARY & CACHE FILES
+# ============================================================================
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.bak
+*.backup
+*~
+
+# Cache directories
+.cache/
+__pycache__/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================================================
+# SECURITY & COMPLIANCE
+# ============================================================================
+# Security scan results
+security-report.*
+vulnerability-report.*
+.scannerwork/
+
+# Compliance and audit
+audit/
+compliance/
+*.audit
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+# Large dataset files (keep smaller examples)
+data/large_datasets/
+data/training_sets/
+data/*_large.csv
+data/*_full.json
+
+# Model artifacts  
+models/experiments/
+models/archived/
+models/backups/
+
+# Analysis outputs
+analysis/
+reports/
+outputs/
+results/
+
+# Demo and presentation files
+demo/videos/
+presentation/*.pptx
+presentation/*.pdf
+
+# ============================================================================
+# KEEP THESE IMPORTANT FILES
+# ============================================================================
+# Always keep these files in version control
+!README.md
+!requirements.txt
+!.env.example
+!.gitignore
+!.gitkeep
+!LICENSE
+!CHANGELOG.md
+!CONTRIBUTING.md
+
+# Keep essential scripts and configurations
+!quick_start.py
+!main.py
+!dataset_generator.py
+!services/
+!frontend/
+!models/train_model.py
+
+# ============================================================================
+# HACKATHON SPECIFIC
+# ============================================================================
+# Temporary hackathon files
+hackathon_temp/
+presentation_draft/
+demo_recordings/
+*.screen-recording
+*.demo
+
+# Team collaboration  
+team_notes/
+brainstorm/
+scratch/
