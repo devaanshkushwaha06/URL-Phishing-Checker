@@ -40,5 +40,12 @@
     "url": "https://www.google.com/",
     "correct_label": 0,
     "user_comment": "User confirmed analysis was correct"
+  },
+  {
+    "feedback_id": "fb_20260224_100422_443909",
+    "timestamp": "2026-02-24T10:04:22.443909",
+    "url": "http://paypal.com/security-login",
+    "correct_label": 1,
+    "user_comment": null
   }
 ]
