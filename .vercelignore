@@ -1,0 +1,86 @@
+# Vercel Ignore File - Exclude large files from deployment
+
+# Virtual Environment (largest contributor)
+.venv/
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Machine Learning Models (often very large)
+models/*.h5
+models/*.pkl
+models/*.joblib
+models/*.model
+models/trained_*
+models/model_*
+
+# Large Datasets
+data/*.csv
+data/*.json
+data/large_*
+data/training_*
+data/raw_*
+
+# Logs
+logs/
+*.log
+
+# Development files
+.pytest_cache/
+.coverage
+.tox/
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (optional)
+*.md
+docs/
+
+# Test files
+test_*
+*_test.py
+tests/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Large dependency files
+requirements-full.txt
+Pipfile.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
