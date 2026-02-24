@@ -3,10 +3,8 @@
  * Purpose: Handle user interactions, API calls, and UI updates
  */
 
-// Configuration - Auto-detect environment
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000' 
-    : `${window.location.protocol}//${window.location.host}/api`;
+// Configuration
+const API_BASE_URL = 'http://localhost:8000';
 let currentAnalysisResult = null;
 
 // DOM Elements
@@ -394,30 +392,11 @@ async function handleFeedbackSubmission() {
 }
 
 /**
- * Submit feedback to API with validation support
+ * Submit feedback to API
  */
 async function submitFeedback(correctLabel, comment = '') {
     if (!currentAnalysisResult) {
         throw new Error('No analysis result available');
-    }
-    
-    // Get additional validation fields from form if available
-    const confidenceSelect = document.getElementById('confidence-level');
-    const expertiseSelect = document.getElementById('user-expertise');
-    
-    const feedbackData = {
-        url: currentAnalysisResult.url,
-        correct_label: correctLabel,
-        user_comment: comment || null
-    };
-    
-    // Add validation fields if available
-    if (confidenceSelect && confidenceSelect.value) {
-        feedbackData.confidence_level = parseInt(confidenceSelect.value);
-    }
-    
-    if (expertiseSelect && expertiseSelect.value) {
-        feedbackData.user_expertise = expertiseSelect.value;
     }
     
     const response = await fetch(`${API_BASE_URL}/feedback`, {
@@ -425,7 +404,11 @@ async function submitFeedback(correctLabel, comment = '') {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(feedbackData)
+        body: JSON.stringify({
+            url: currentAnalysisResult.url,
+            correct_label: correctLabel,
+            user_comment: comment || null
+        })
     });
     
     if (!response.ok) {
@@ -435,17 +418,7 @@ async function submitFeedback(correctLabel, comment = '') {
     
     const result = await response.json();
     console.log('Feedback submitted:', result);
-    
-    // Show appropriate message based on validation status
-    if (result.validation_status === 'approved') {
-        showToast('Feedback approved and added to training data!', 'success');
-    } else if (result.validation_status === 'pending') {
-        showToast('Feedback received and pending review', 'info');
-    } else if (result.validation_status === 'rejected') {
-        showToast('Feedback was rejected: ' + result.message, 'warning');
-    } else {
-        showToast('Feedback submitted successfully!', 'success');
-    }
+    showToast('Feedback submitted successfully!', 'success');
     
     return result;
 }
