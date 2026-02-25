@@ -1,4 +1,10 @@
 # AI Phishing Detection System - Git Ignore File
+# 
+# ⚠️  SECURITY WARNING ⚠️
+# This file prevents sensitive environment files, passwords, and API keys 
+# from being committed to the repository. NEVER commit actual .env files!
+# Only .env.example and .env.template files should be tracked.
+#
 
 # ============================================================================
 # PYTHON
@@ -39,25 +45,32 @@ venv.bak/
 conda-meta/
 
 # ============================================================================
-# ENVIRONMENT & CONFIGURATION
+# ENVIRONMENT & CONFIGURATION - NEVER COMMIT THESE!
 # ============================================================================
+# Environment files with secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.template
 *.env
-config.json
-secrets.json
+!*.env.example
+!*.env.template
 
-# ============================================================================
-# SECURITY CRITICAL - ADMIN CONFIGURATION (DO NOT COMMIT!)
-# ============================================================================
+# Admin configuration files (contain passwords/secrets)
 admin_config.env
+admin_config.*.env
 .admin_env
 admin_credentials.*
 admin_passwords.*
 .admin_settings
+
+# Configuration files that may contain secrets
+config.json
+secrets.json
+.secrets
+.config.json
+credentials.json
+auth.json
 admin_tokens.*
 api_keys.txt
 
@@ -309,6 +322,7 @@ presentation/*.pdf
 !README.md
 !requirements.txt
 !.env.example
+!admin_config.env.example
 !.gitignore
 !.gitkeep
 !LICENSE
@@ -316,8 +330,8 @@ presentation/*.pdf
 !CONTRIBUTING.md
 
 # Keep essential scripts and configurations
-!quick_start.py
 !main.py
+!vercel.json
 !dataset_generator.py
 !services/
 !frontend/
