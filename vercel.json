@@ -1,15 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "frontend/**/*",
-      "use": "@vercel/static"
+  "functions": {
+    "api/index.py": {
+      "runtime": "@vercel/python"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",
@@ -22,11 +16,5 @@
   ],
   "env": {
     "VIRUSTOTAL_API_KEY": "@virustotal_api_key"
-  },
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 10
-    }
-  },
-  "outputDirectory": "frontend"
+  }
 }
