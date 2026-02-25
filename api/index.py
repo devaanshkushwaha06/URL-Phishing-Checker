@@ -5,6 +5,15 @@ Purpose: FastAPI application configured for Vercel deployment
 
 import os
 import sys
+import json
+import logging
+from datetime import datetime
+from typing import Dict, Any, Optional
+import csv
+
+# Setup logging for Vercel FIRST - before any other imports that use logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,12 +22,6 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, validator
-import json
-import logging
-from datetime import datetime
-from typing import Dict, Any, Optional
-import csv
-import os
 
 # Import detection engine
 try:
@@ -32,10 +35,6 @@ except ImportError:
         # Fallback for serverless environment
         logger.warning(f"Could not import DetectionEngine: {e}. Using mock fallback.")
         DetectionEngine = None
-
-# Setup logging for Vercel
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -502,6 +501,3 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={"success": False, "error": "Internal server error", "detail": str(exc)}
     )
-
-# Export the app for Vercel
-handler = app
