@@ -13,8 +13,5 @@
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
-  ],
-  "env": {
-    "VIRUSTOTAL_API_KEY": "@virustotal_api_key"
-  }
+  ]
 }
