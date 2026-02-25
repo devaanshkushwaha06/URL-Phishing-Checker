@@ -133,7 +133,7 @@ async function handleUrlScan() {
     showLoadingState();
     
     try {
-        const response = await fetch(`${API_BASE_URL}/scan-url`, {
+        const response = await fetch(`${API_BASE_URL}/api/scan-url`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -407,7 +407,7 @@ async function submitFeedback(correctLabel, comment = '') {
         throw new Error('No analysis result available');
     }
     
-    const response = await fetch(`${API_BASE_URL}/feedback`, {
+    const response = await fetch(`${API_BASE_URL}/api/feedback`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -436,7 +436,7 @@ async function submitFeedback(correctLabel, comment = '') {
  */
 async function checkApiStatus() {
     try {
-        const response = await fetch(`${API_BASE_URL}/health`);
+        const response = await fetch(`${API_BASE_URL}/api/health`);
         
         if (response.ok) {
             const status = await response.json();
