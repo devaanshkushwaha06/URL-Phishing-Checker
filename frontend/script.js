@@ -3,8 +3,16 @@
  * Purpose: Handle user interactions, API calls, and UI updates
  */
 
-// Configuration
-const API_BASE_URL = 'http://localhost:8000';
+// Configuration - Auto-detect environment
+const API_BASE_URL = (() => {
+    // Check if running on localhost (development)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+    }
+    // Production - use relative path for Vercel deployment
+    return '';
+})();
+
 let currentAnalysisResult = null;
 
 // DOM Elements

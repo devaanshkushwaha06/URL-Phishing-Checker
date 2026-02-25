@@ -7,7 +7,23 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green?style=for-the-badge&logo=fastapi)
 ![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
 
-## 🚀 **System Overview**
+## � Project Structure  
+
+```
+URL-Phising/
+├── 📁 api/          # Vercel deployment (Production API)
+├── 📁 frontend/     # Web interface (HTML/CSS/JS)
+├── 📁 services/     # Core business logic  
+├── 📁 data/         # Runtime data storage
+├── 📁 models/       # ML models & training
+├── 📁 docs/         # Documentation
+├── main.py         # Development server
+└── vercel.json     # Deployment config
+```
+
+📖 **[View Complete Structure](docs/PROJECT_STRUCTURE.md)**
+
+## �🚀 **System Overview**
 
 This is a **production-ready AI phishing detection system** that combines:
 
