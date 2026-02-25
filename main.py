@@ -15,6 +15,8 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import pandas as pd
 from services.detection_engine import HybridDetectionEngine
+from services.feedback_review_system import FeedbackReviewSystem
+from services.admin_api import admin_router
 import asyncio
 import threading
 
@@ -40,8 +42,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global detection engine
+# Global detection engine and review system
 detection_engine = None
+review_system = None
 
 # Pydantic models for request/response
 class URLScanRequest(BaseModel):
@@ -85,11 +88,20 @@ class FeedbackRequest(BaseModel):
     url: str
     correct_label: int  # 0 = legitimate, 1 = phishing
     user_comment: Optional[str] = None
+    confidence_level: Optional[int] = None  # 1-5 rating
+    user_expertise: Optional[str] = None    # beginner, intermediate, expert
+    user_id: Optional[str] = None           # Optional user identifier
     
     @validator('correct_label')
     def validate_label(cls, v):
         if v not in [0, 1]:
             raise ValueError('correct_label must be 0 (legitimate) or 1 (phishing)')
+        return v
+    
+    @validator('confidence_level')
+    def validate_confidence(cls, v):
+        if v is not None and v not in [1, 2, 3, 4, 5]:
+            raise ValueError('confidence_level must be between 1 and 5')
         return v
 
 class FeedbackResponse(BaseModel):
@@ -97,6 +109,9 @@ class FeedbackResponse(BaseModel):
     success: bool
     message: str
     feedback_id: str
+
+# Include admin router
+app.include_router(admin_router)
 
 class HealthResponse(BaseModel):
     """Health check response"""
@@ -109,7 +124,7 @@ class HealthResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize the detection engine on startup"""
-    global detection_engine
+    global detection_engine, review_system
     
     logger.info("🚀 Starting Phishing Detection API...")
     
@@ -117,11 +132,14 @@ async def startup_event():
     virustotal_key = os.getenv('VIRUSTOTAL_API_KEY')
     detection_engine = HybridDetectionEngine(virustotal_key)
     
+    # Initialize feedback review system
+    review_system = FeedbackReviewSystem()
+    
     # Create necessary directories
     os.makedirs('logs', exist_ok=True)
     os.makedirs('data', exist_ok=True)
     
-    logger.info("✅ Detection engine initialized successfully")
+    logger.info("✅ Detection engine and review system initialized successfully")
 
 # Main endpoints
 @app.post("/scan-url", response_model=URLScanResponse)
@@ -174,34 +192,31 @@ async def scan_url(request: URLScanRequest):
 @app.post("/feedback", response_model=FeedbackResponse)
 async def submit_feedback(request: FeedbackRequest, background_tasks: BackgroundTasks):
     """
-    Submit user feedback for model improvement
+    Submit user feedback for model improvement (now with review system)
     
-    Accepts corrected labels and triggers background retraining
+    Feedback goes through review process before being added to training data
     """
     try:
-        feedback_id = f"fb_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        if review_system is None:
+            raise HTTPException(status_code=503, detail="Review system not initialized")
         
-        # Store feedback
-        feedback_data = {
-            'feedback_id': feedback_id,
-            'timestamp': datetime.now().isoformat(),
-            'url': request.url,
-            'correct_label': request.correct_label,
-            'user_comment': request.user_comment
-        }
-        
-        save_feedback(feedback_data)
-        
-        # Schedule background retraining
-        background_tasks.add_task(process_feedback_retraining, feedback_data)
+        # Submit feedback through review system
+        result = review_system.submit_user_feedback(
+            url=request.url,
+            correct_label=request.correct_label,
+            user_comment=request.user_comment,
+            confidence_level=request.confidence_level,
+            user_expertise=request.user_expertise,
+            user_id=request.user_id
+        )
         
         response = FeedbackResponse(
             success=True,
-            message="Feedback received successfully. Model will be updated in the background.",
-            feedback_id=feedback_id
+            message=result["message"],
+            feedback_id=result["feedback_id"]
         )
         
-        logger.info(f"Feedback received: {feedback_id} for URL: {request.url}")
+        logger.info(f"Feedback submitted for review: {result['feedback_id']} - Status: {result['status']}")
         
         return response
         

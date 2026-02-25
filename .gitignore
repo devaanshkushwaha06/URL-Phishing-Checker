@@ -51,6 +51,17 @@ config.json
 secrets.json
 
 # ============================================================================
+# SECURITY CRITICAL - ADMIN CONFIGURATION (DO NOT COMMIT!)
+# ============================================================================
+admin_config.env
+.admin_env
+admin_credentials.*
+admin_passwords.*
+.admin_settings
+admin_tokens.*
+api_keys.txt
+
+# ============================================================================
 # MACHINE LEARNING MODELS
 # ============================================================================
 models/*.h5

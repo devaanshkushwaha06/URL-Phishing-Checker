@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Feedback Review System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .pending { color: #ff6b6b; }
+        .approved { color: #51cf66; }
+        .flagged { color: #ffd43b; }
+        .total { color: #667eea; }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .feedback-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .panel-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .feedback-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-item:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .feedback-item.flagged {
+            border-left: 4px solid #ffd43b;
+            background: #fefdf5;
+        }
+
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .feedback-url {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feedback-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .label-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .legitimate { background: #d4edda; color: #155724; }
+        .phishing { background: #f8d7da; color: #721c24; }
+
+        .status-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-flagged { background: #ffd43b; color: #533f03; }
+
+        .feedback-comment {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-style: italic;
+        }
+
+        .validation-info {
+            background: #e3f2fd;
+            padding: 0.5rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-approve, .btn-reject {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-approve {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-approve:hover {
+            background: #40c057;
+        }
+
+        .btn-reject {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-reject:hover {
+            background: #ff5252;
+        }
+
+        .admin-comment {
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .batch-actions {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .batch-actions.active {
+            display: block;
+        }
+
+        .selected-count {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-right: 1rem;
+        }
+
+        .checkbox {
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .feedback-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🛡️ Feedback Review Dashboard</div>
+            <div class="admin-info">
+                <span id="admin-name">Admin</span>
+                <button onclick="logout()" class="refresh-btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Dashboard Statistics -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-number pending" id="pending-count">-</div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number flagged" id="flagged-count">-</div>
+                <div class="stat-label">Flagged Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number approved" id="approval-rate">-</div>
+                <div class="stat-label">Approval Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number total" id="total-reviewed">-</div>
+                <div class="stat-label">Total Reviewed</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Feedback Review Panel -->
+            <div class="feedback-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Pending Feedback Review</h2>
+                    <button onclick="loadPendingFeedback()" class="refresh-btn">Refresh</button>
+                </div>
+
+                <!-- Batch Actions -->
+                <div class="batch-actions" id="batch-actions">
+                    <span class="selected-count" id="selected-count">0 selected</span>
+                    <button onclick="batchApprove()" class="btn-approve">Batch Approve</button>
+                    <button onclick="batchReject()" class="btn-reject">Batch Reject</button>
+                </div>
+
+                <!-- Feedback Items Container -->
+                <div id="feedback-container">
+                    <div class="loading">Loading feedback items...</div>
+                </div>
+            </div>
+
+            <!-- Side Panel -->
+            <div class="feedback-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Recent Activity</h2>
+                </div>
+                <div id="recent-activity">
+                    <div class="loading">Loading recent activity...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:8000';
+        
+        let selectedFeedback = new Set();
+        let allPendingFeedback = [];
+        let authToken = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication first
+            if (!checkAuthentication()) {
+                redirectToLogin();
+                return;
+            }
+            
+            loadDashboardData();
+            loadPendingFeedback();
+            
+            // Refresh every 30 seconds
+            setInterval(loadDashboardData, 30000);
+        });
+
+        function checkAuthentication() {
+            // Check if user is authenticated
+            const isAuthenticated = localStorage.getItem('admin_authenticated');
+            const token = localStorage.getItem('admin_token');
+            const loginTime = localStorage.getItem('admin_login_time');
+            
+            if (!isAuthenticated || !token || !loginTime) {
+                return false;
+            }
+            
+            // Check if session is expired (24 hours)
+            const currentTime = Date.now();
+            const sessionAge = currentTime - parseInt(loginTime);
+            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+            
+            if (sessionAge > maxAge) {
+                clearAuthentication();
+                return false;
+            }
+            
+            authToken = token;
+            
+            // Update admin name display
+            const adminName = localStorage.getItem('admin_username') || 'Admin';
+            document.getElementById('admin-name').textContent = adminName;
+            
+            return true;
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'admin_login.html';
+        }
+
+        function clearAuthentication() {
+            localStorage.removeItem('admin_authenticated');
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_login_time');
+            localStorage.removeItem('admin_username');
+        }
+
+        async function loadDashboardData() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    handleAuthError();
+                    return;
+                }
+                
+                if (!response.ok) throw new Error('Failed to load dashboard data');
+                
+                const data = await response.json();
+                
+                // Update statistics
+                document.getElementById('pending-count').textContent = data.pending_count;
+                document.getElementById('flagged-count').textContent = data.flagged_count;
+                document.getElementById('approval-rate').textContent = 
+                    data.quality_metrics.approval_rate ? 
+                    Math.round(data.quality_metrics.approval_rate) + '%' : '0%';
+                document.getElementById('total-reviewed').textContent = data.quality_metrics.total_reviewed || 0;
+                
+                // Update recent activity
+                updateRecentActivity(data.recent_decisions);
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        async function loadPendingFeedback() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/pending-feedback?limit=50`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    handleAuthError();
+                    return;
+                }
+                
+                if (!response.ok) throw new Error('Failed to load pending feedback');
+                
+                allPendingFeedback = await response.json();
+                renderFeedbackItems(allPendingFeedback);
+                
+            } catch (error) {
+                console.error('Error loading pending feedback:', error);
+                document.getElementById('feedback-container').innerHTML = 
+                    '<div class="empty-state">Error loading feedback items</div>';
+            }
+        }
+
+        function renderFeedbackItems(feedbackItems) {
+            const container = document.getElementById('feedback-container');
+            
+            if (feedbackItems.length === 0) {
+                container.innerHTML = '<div class="empty-state">🎉 No pending feedback items!</div>';
+                return;
+            }
+
+            const html = feedbackItems.map(item => `
+                <div class="feedback-item ${item.status === 'flagged' ? 'flagged' : ''}" data-id="${item.feedback_id}">
+                    <div class="feedback-header">
+                        <div>
+                            <input type="checkbox" class="checkbox" onchange="toggleSelection('${item.feedback_id}')" />
+                            <span class="feedback-id">#${item.feedback_id.slice(-8)}</span>
+                        </div>
+                        <div>
+                            <span class="status-badge status-${item.status}">${item.status}</span>
+                            <span class="label-badge ${item.correct_label === 1 ? 'phishing' : 'legitimate'}">
+                                ${item.correct_label === 1 ? 'Phishing' : 'Legitimate'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="feedback-url">${item.url}</div>
+                    
+                    <div class="feedback-meta">
+                        <span>📅 ${new Date(item.timestamp).toLocaleString()}</span>
+                        ${item.confidence_level ? `<span>🎯 Confidence: ${item.confidence_level}/5</span>` : ''}
+                        ${item.user_expertise ? `<span>👤 ${item.user_expertise}</span>` : ''}
+                    </div>
+                    
+                    ${item.user_comment ? `
+                        <div class="feedback-comment">
+                            💬 "${item.user_comment}"
+                        </div>
+                    ` : ''}
+                    
+                    ${item.auto_validation_result ? `
+                        <div class="validation-info">
+                            🤖 Auto-validation Score: ${item.auto_validation_result.validation_score}/10
+                            ${item.flagged_reasons.length > 0 ? 
+                                `<br />⚠️ Flags: ${item.flagged_reasons.join(', ')}` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="action-buttons">
+                        <button class="btn-approve" onclick="reviewFeedback('${item.feedback_id}', 'approve')">
+                            ✅ Approve
+                        </button>
+                        <button class="btn-reject" onclick="showRejectForm('${item.feedback_id}')">
+                            ❌ Reject
+                        </button>
+                    </div>
+                    
+                    <textarea class="admin-comment" id="comment-${item.feedback_id}" 
+                              placeholder="Reason for rejection..."></textarea>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function toggleSelection(feedbackId) {
+            if (selectedFeedback.has(feedbackId)) {
+                selectedFeedback.delete(feedbackId);
+            } else {
+                selectedFeedback.add(feedbackId);
+            }
+            
+            updateBatchActions();
+        }
+
+        function updateBatchActions() {
+            const count = selectedFeedback.size;
+            const batchActions = document.getElementById('batch-actions');
+            const selectedCount = document.getElementById('selected-count');
+            
+            selectedCount.textContent = `${count} selected`;
+            
+            if (count > 0) {
+                batchActions.classList.add('active');
+            } else {
+                batchActions.classList.remove('active');
+            }
+        }
+
+        async function reviewFeedback(feedbackId, decision, adminComment = '') {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/review-feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        feedback_id: feedbackId,
+                        decision: decision,
+                        admin_comment: adminComment,
+                        admin_id: 'admin'
+                    })
+                });
+                
+                if (response.status === 401) {
+                    handleAuthError();
+                    return;
+                }
+                
+                if (!response.ok) throw new Error('Failed to review feedback');
+                
+                const result = await response.json();
+                
+                // Remove item from display
+                const feedbackItem = document.querySelector(`[data-id="${feedbackId}"]`);
+                if (feedbackItem) {
+                    feedbackItem.style.opacity = '0.5';
+                    setTimeout(() => feedbackItem.remove(), 500);
+                }
+                
+                // Refresh data
+                loadDashboardData();
+                
+                // Show notification
+                showNotification(`Feedback ${decision}d successfully`, 'success');
+                
+            } catch (error) {
+                console.error('Error reviewing feedback:', error);
+                showNotification('Error processing feedback', 'error');
+            }
+        }
+
+        function showRejectForm(feedbackId) {
+            const commentBox = document.getElementById(`comment-${feedbackId}`);
+            commentBox.style.display = 'block';
+            commentBox.focus();
+            
+            // Add submit button
+            if (!commentBox.nextElementSibling || !commentBox.nextElementSibling.classList.contains('reject-submit')) {
+                const submitBtn = document.createElement('button');
+                submitBtn.className = 'btn-reject reject-submit';
+                submitBtn.textContent = 'Submit Rejection';
+                submitBtn.style.marginTop = '0.5rem';
+                submitBtn.onclick = () => {
+                    reviewFeedback(feedbackId, 'reject', commentBox.value);
+                };
+                commentBox.parentNode.insertBefore(submitBtn, commentBox.nextSibling);
+            }
+        }
+
+        async function batchApprove() {
+            if (selectedFeedback.size === 0) return;
+            
+            if (!confirm(`Approve ${selectedFeedback.size} feedback items?`)) return;
+            
+            await batchReview('approve', '');
+        }
+
+        async function batchReject() {
+            if (selectedFeedback.size === 0) return;
+            
+            const reason = prompt('Enter reason for batch rejection:');
+            if (!reason) return;
+            
+            await batchReview('reject', reason);
+        }
+
+        async function batchReview(decision, comment) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/batch-review`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        feedback_ids: Array.from(selectedFeedback),
+                        decision: decision,
+                        admin_comment: comment
+                    })
+                });
+                
+                if (response.status === 401) {
+                    handleAuthError();
+                    return;
+                }
+                
+                if (!response.ok) throw new Error('Batch operation failed');
+                
+                const result = await response.json();
+                
+                // Clear selections
+                selectedFeedback.clear();
+                updateBatchActions();
+                
+                // Refresh data
+                loadPendingFeedback();
+                loadDashboardData();
+                
+                showNotification(`Batch ${decision}: ${result.summary.successful} successful, ${result.summary.failed} failed`, 'success');
+                
+            } catch (error) {
+                console.error('Batch operation error:', error);
+                showNotification('Batch operation failed', 'error');
+            }
+        }
+
+        function updateRecentActivity(decisions) {
+            const container = document.getElementById('recent-activity');
+            
+            if (decisions.length === 0) {
+                container.innerHTML = '<div class="empty-state">No recent activity</div>';
+                return;
+            }
+            
+            const html = decisions.slice(0, 5).map(decision => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid #eee; font-size: 0.9rem;">
+                    <div style="display: flex; justify-content: between;">
+                        <span style="font-weight: bold; color: ${decision.decision === 'approve' ? '#51cf66' : '#ff6b6b'}">
+                            ${decision.decision.toUpperCase()}
+                        </span>
+                        <span style="font-size: 0.8rem; color: #666;">
+                            ${new Date(decision.timestamp).toLocaleString()}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 0.2rem;">
+                        #${decision.feedback_id.slice(-8)}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function showNotification(message, type) {
+            // Simple notification system
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 2rem;
+                background: ${type === 'success' ? '#51cf66' : '#ff6b6b'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 1000;
+                font-weight: bold;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                performLogout();
+            }
+        }
+
+        async function performLogout() {
+            try {
+                // Call logout API
+                await fetch(`${API_BASE_URL}/admin/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+            } catch (error) {
+                console.log('Logout API call failed, but continuing with local logout');
+            }
+            
+            // Clear local authentication
+            clearAuthentication();
+            
+            // Redirect to login page
+            window.location.href = 'admin_login.html';
+        }
+
+        function handleAuthError() {
+            showNotification('Authentication expired. Please login again.', 'error');
+            clearAuthentication();
+            setTimeout(() => {
+                window.location.href = 'admin_login.html';
+            }, 2000);
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        loadPendingFeedback();
+                        break;
+                    case 'a':
+                        e.preventDefault();
+                        batchApprove();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
