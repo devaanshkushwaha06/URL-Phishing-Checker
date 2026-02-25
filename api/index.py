@@ -17,14 +17,18 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
-import pandas as pd
+import csv
+import os
 
-# Import your detection engine
+# Import detection engine
 try:
-    from services.detection_engine import HybridDetectionEngine
+    from .lightweight_detection import LightweightDetectionEngine as DetectionEngine
 except ImportError:
-    # Fallback for serverless environment
-    HybridDetectionEngine = None
+    try:
+        from lightweight_detection import LightweightDetectionEngine as DetectionEngine
+    except ImportError:
+        # Fallback for serverless environment
+        DetectionEngine = None
 
 # Setup logging for Vercel
 logging.basicConfig(level=logging.INFO)
@@ -120,8 +124,8 @@ def get_detection_engine():
     global detection_engine
     if detection_engine is None:
         virustotal_key = os.getenv('VIRUSTOTAL_API_KEY')
-        if HybridDetectionEngine:
-            detection_engine = HybridDetectionEngine(virustotal_key)
+        if DetectionEngine:
+            detection_engine = DetectionEngine(virustotal_key)
         else:
             # Fallback for serverless - create a mock detection engine
             logger.warning("Detection engine not available, using fallback")
@@ -507,20 +511,36 @@ async def process_approved_feedback(feedback_data: Dict[str, Any]):
         }
         
         # Load existing dataset or create new
+        dataset_entries = []
         if os.path.exists(dataset_file):
-            df = pd.read_csv(dataset_file)
-        else:
-            df = pd.DataFrame(columns=['url', 'label', 'validation_score', 'timestamp'])
+            try:
+                with open(dataset_file, 'r', newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    dataset_entries = list(reader)
+            except Exception as e:
+                logger.warning(f"Could not read dataset file: {e}")
+                dataset_entries = []
         
         # Add new entry
-        df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+        dataset_entries.append(new_entry)
         
         # Remove duplicates (keep highest validation score)
-        df = df.sort_values('validation_score', ascending=False)
-        df = df.drop_duplicates(subset=['url'], keep='first')
+        url_entries = {}
+        for entry in dataset_entries:
+            url = entry['url']
+            score = float(entry.get('validation_score', 0))
+            if url not in url_entries or score > float(url_entries[url].get('validation_score', 0)):
+                url_entries[url] = entry
         
         # Save updated dataset
-        df.to_csv(dataset_file, index=False)
+        try:
+            with open(dataset_file, 'w', newline='', encoding='utf-8') as f:
+                fieldnames = ['url', 'label', 'validation_score', 'timestamp']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader() 
+                writer.writerows(url_entries.values())
+        except Exception as e:
+            logger.error(f"Could not save dataset: {e}")
         
         logger.info(f"Added validated feedback to training dataset: {feedback_data['feedback_id']}")
         
