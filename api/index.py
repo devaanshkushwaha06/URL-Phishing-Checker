@@ -501,3 +501,12 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={"success": False, "error": "Internal server error", "detail": str(exc)}
     )
+
+# Vercel serverless handler using Mangum
+try:
+    from mangum import Mangum
+    handler = Mangum(app, lifespan="off")
+    logger.info("Mangum handler created successfully")
+except ImportError:
+    logger.warning("Mangum not available, using app directly")
+    handler = app
