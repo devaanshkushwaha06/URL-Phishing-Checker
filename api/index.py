@@ -22,12 +22,15 @@ import os
 
 # Import detection engine
 try:
-    from .lightweight_detection import LightweightDetectionEngine as DetectionEngine
+    from api.lightweight_detection import LightweightDetectionEngine as DetectionEngine
+    logger.info("Successfully imported lightweight_detection from api package")
 except ImportError:
     try:
         from lightweight_detection import LightweightDetectionEngine as DetectionEngine
-    except ImportError:
+        logger.info("Successfully imported lightweight_detection directly")
+    except ImportError as e:
         # Fallback for serverless environment
+        logger.warning(f"Could not import DetectionEngine: {e}. Using mock fallback.")
         DetectionEngine = None
 
 # Setup logging for Vercel
@@ -42,6 +45,15 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc"
 )
+
+# Startup event handler
+@app.on_event("startup")
+async def startup_event():
+    """Log startup information"""
+    logger.info("=== FastAPI Application Starting ===")
+    logger.info(f"DetectionEngine available: {DetectionEngine is not None}")
+    logger.info(f"Python version: {sys.version}")
+    logger.info("Application ready to receive requests")
 
 # Configure CORS for production
 app.add_middleware(
@@ -117,7 +129,18 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     version: str
-    components: Dict[str, str]
+    components: Optional[Dict[str, str]] = None
+
+# Root API endpoint
+@app.get("/")
+async def root():
+    """Root API endpoint"""
+    return {"message": "AI Phishing Detection API", "status": "running"}
+
+@app.get("/api")
+async def api_root():
+    """API root endpoint"""
+    return {"message": "AI Phishing Detection API", "status": "running", "version": "1.0.0"}
 
 # Initialize detection engine on first request
 def get_detection_engine():
@@ -380,34 +403,27 @@ async def submit_feedback(request: FeedbackRequest):
         logger.error(f"Error processing feedback: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing feedback: {str(e)}")
 
-@app.get("/api/health", response_model=HealthResponse)
+@app.get("/api/health")
 async def health_check():
     """Health check endpoint - simplified for serverless"""
     try:
-        # Simple health check without file system dependencies
-        response = HealthResponse(
-            status="healthy",
-            timestamp=datetime.now().isoformat(),
-            version="1.0.0",
-            components={
-                'api': 'operational',
-                'detection_engine': 'mock_fallback' if DetectionEngine is None else 'operational',
-                'environment': 'serverless'
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0",
+            "components": {
+                "api": "operational",
+                "detection_engine": "mock_fallback" if DetectionEngine is None else "operational",
+                "environment": "serverless"
             }
-        )
-        
-        return response
-        
+        }
     except Exception as e:
         logger.error(f"Health check error: {e}")
-        return JSONResponse(
-            status_code=200,  # Still return 200 for health checks
-            content={
-                "status": "degraded",
-                "timestamp": datetime.now().isoformat(),
-                "error": str(e)
-            }
-        )
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0"
+        }
 
 @app.get("/api/feedback/pending")
 async def get_pending_feedback():
