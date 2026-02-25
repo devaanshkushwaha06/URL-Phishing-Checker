@@ -1,461 +1,150 @@
 # 🛡️ AI Phishing Detection System
 
-> **Hackathon Project**: Advanced Deep Learning + Heuristic Hybrid Phishing URL Detection System
+> **Deployment Ready**: Advanced Deep Learning + Heuristic Hybrid Phishing URL Detection System
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue?style=for-the-badge&logo=python)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-orange?style=for-the-badge&logo=tensorflow)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green?style=for-the-badge&logo=fastapi)
-![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
+![Vercel](https://img.shields.io/badge/Vercel-Ready-black?style=for-the-badge&logo=vercel)
 
-## � Project Structure  
+## 🏗️ Repository Structure  
 
 ```
 URL-Phising/
-├── 📁 api/          # Vercel deployment (Production API)
-├── 📁 frontend/     # Web interface (HTML/CSS/JS)
-├── 📁 services/     # Core business logic  
-├── 📁 data/         # Runtime data storage
-├── 📁 models/       # ML models & training
-├── 📁 docs/         # Documentation
-├── main.py         # Development server
-└── vercel.json     # Deployment config
+├── 📁 api/              # Vercel serverless functions
+├── 📁 frontend/         # Web interface (HTML/CSS/JS)
+├── 📁 services/         # Core detection engine  
+├── 📁 models/           # ML training scripts
+├── main.py             # Local development server
+├── requirements.txt    # Dependencies
+└── vercel.json         # Vercel deployment config
 ```
 
-📖 **[View Complete Structure](docs/PROJECT_STRUCTURE.md)**
+## 🚀 **System Features**
 
-## �🚀 **System Overview**
+Production-ready AI phishing detection system featuring:
 
-This is a **production-ready AI phishing detection system** that combines:
+- **🧠 Deep Learning Models** - Bidirectional LSTM with character-level tokenization
+- **🔍 Heuristic Rule Engine** - Pattern analysis, URL structure analysis 
+- **🌐 Real-time Threat Intelligence** - VirusTotal API integration
+- **📊 Risk Scoring System** - 0-100 comprehensive risk assessment
+- **🔄 Adaptive Learning** - Feedback loop with automatic model retraining
+- **⚡ FastAPI Backend** - RESTful API with async processing  
+- **💻 Modern Frontend** - Responsive HTML/CSS/JS interface
 
-- **🧠 Deep Learning Models** (Bidirectional LSTM with character-level tokenization)
-- **🔍 Heuristic Rule Engine** (Pattern analysis, URL structure analysis) 
-- **🌐 Real-time Threat Intelligence** (VirusTotal API integration)
-- **📊 Risk Scoring System** (0-100 comprehensive risk assessment)
-- **🔄 Adaptive Learning** (Feedback loop with automatic model retraining)
-- **⚡ FastAPI Backend** (RESTful API with async processing)  
-- **💻 Modern Frontend** (Responsive HTML/CSS/JS interface)
+## 🎯 **Detection Capabilities**
 
----
+### **AI Detection Engine**
+- Character-level deep learning analysis
+- Bidirectional LSTM neural network
+- Real-time URL feature extraction
+- Pattern recognition for spoofed domains
 
-## 🎯 **Key Features**
-
-### ✨ **Automatic Dataset Generation**
-- Generates 5000+ spoofed URLs automatically
-- Brand spoofing (PayPal, Google, Amazon, Microsoft, etc.)
+### **Heuristic Analysis** 
+- Brand spoofing detection (PayPal, Google, Amazon, Microsoft, etc.)
 - Character substitution attacks (o→0, l→1, i→1)
 - Homoglyph attacks (Cyrillic characters)
-- Subdomain manipulation
-- IP-based phishing URLs
+- Subdomain manipulation detection
+- IP-based phishing URL identification
 
-### 🤖 **Hybrid AI Detection Engine**
-- **Deep Learning**: Bidirectional LSTM with 94%+ accuracy
-- **Heuristic Analysis**: 8 rule-based indicators
-- **Threat Intelligence**: VirusTotal API integration
-- **Risk Aggregation**: Weighted scoring (0-100 scale)
+### **API Integration**
+- VirusTotal threat intelligence
+- Real-time reputation checking
+- Multi-engine malware scanning
+- Comprehensive risk assessment
 
-### 📈 **Real-time Analysis**
-- Processing time: <500ms average
-- Live risk score visualization
-- Detailed explanation generation
-- Classification confidence levels
+## 🚀 **Quick Deploy**
 
-### 🔄 **Continuous Learning**
-- User feedback collection
-- Automatic model retraining (every 50 feedback entries)
-- Performance monitoring
-- Dataset augmentation
+### **Vercel Deployment (Recommended)**
 
----
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/devaanshkushwaha06/URL-Phishing-Checker.git
+   cd URL-Phishing-Checker
+   ```
 
-## 🏗️ **Architecture**
+2. **Deploy to Vercel**
+   ```bash
+   npm i -g vercel
+   vercel
+   ```
 
-```mermaid
-graph TB
-    A[User Input] --> B[FastAPI Backend]
-    B --> C[Hybrid Detection Engine]
-    
-    C --> D[Heuristic Analyzer]
-    C --> E[ML Predictor]
-    C --> F[VirusTotal API]
-    
-    D --> G[Risk Aggregator]
-    E --> G
-    F --> G
-    
-    G --> H[Classification & Score]
-    H --> I[Frontend Display]
-    
-    I --> J[User Feedback]
-    J --> K[Retraining Pipeline]
-    K --> E
-```
+3. **Configure Environment Variables** (Optional)
+   - Add `VIRUSTOTAL_API_KEY` for enhanced detection
+   - Add admin credentials for dashboard access
 
----
+4. **Access Application**
+   - Main interface: `https://your-app.vercel.app/`
+   - API docs: `https://your-app.vercel.app/api/docs`
 
-## 📁 **Project Structure**
+### **Local Development**
 
-```
-phishing-detection-system/
-├── 📊 data/
-│   ├── generated_dataset.csv      # Auto-generated training data
-│   ├── feedback_dataset.csv       # User feedback data
-│   └── combined_training_dataset.csv
-├── 🤖 models/
-│   ├── train_model.py             # Deep learning trainer
-│   ├── phishing_model_*.h5        # Trained models
-│   ├── *_tokenizer.pkl            # Tokenizers
-│   └── *_metadata.json            # Model metadata
-├── 🔧 services/
-│   └── detection_engine.py        # Hybrid detection engine
-├── 🌐 frontend/
-│   ├── index.html                 # Main interface
-│   ├── style.css                  # Responsive styling
-│   └── script.js                  # Frontend logic
-├── 📝 logs/
-│   ├── scan_requests.json         # API usage logs
-│   └── training_metrics.json      # Model performance
-├── 🚀 main.py                     # FastAPI application
-├── 🧬 dataset_generator.py        # Automatic dataset generation
-├── 📋 requirements.txt            # Python dependencies
-├── 🔐 .env.example                # Environment configuration
-└── 📖 README.md                   # This file
-```
+1. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
----
+2. **Run Development Server**
+   ```bash
+   python main.py
+   ```
 
-## ⚡ **Quick Start**
+3. **Access Locally**
+   - Main app: `http://localhost:8000`
+   - API docs: `http://localhost:8000/docs`
 
-### 1️⃣ **Setup Environment**
+## 🔗 **API Endpoints**
 
-```bash
-# Clone repository
-git clone <repository-url>
-cd phishing-detection-system
+- `POST /scan` - Analyze URL for phishing
+- `POST /feedback` - Submit user feedback  
+- `GET /stats` - Get system statistics
+- `GET /admin/dashboard` - Admin interface
+- `POST /admin/login` - Admin authentication
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# OR
-venv\Scripts\activate     # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### 2️⃣ **Configure Environment**
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env file (optional - runs without API keys)
-# Add your VirusTotal API key for enhanced detection
-VIRUSTOTAL_API_KEY=your_api_key_here
-```
-
-### 3️⃣ **Generate Dataset & Train Model**
-
-```bash
-# Generate training dataset (5000 samples)
-python dataset_generator.py
-
-# Train deep learning model
-python models/train_model.py
-```
-
-### 4️⃣ **Start Backend API**
-
-```bash
-# Start FastAPI server
-python main.py
-
-# API will be available at:
-# 🌐 http://localhost:8000
-# 📖 API Docs: http://localhost:8000/docs
-```
-
-### 5️⃣ **Launch Frontend**
-
-```bash
-# Serve frontend (simple HTTP server)
-cd frontend
-python -m http.server 8080
-
-# Open browser: http://localhost:8080
-```
-
----
-
-## 🔌 **API Endpoints**
-
-### **POST /scan-url**
-Analyze URL for phishing indicators
+## 📊 **Response Format**
 
 ```json
-// Request
-{
-  "url": "https://payp4l-security.com/login"
-}
-
-// Response  
 {
   "success": true,
-  "url": "https://payp4l-security.com/login",
-  "domain": "payp4l-security.com",
-  "deep_learning_probability": 0.89,
-  "heuristic_score": 32.5,
-  "api_score": 15.0,
-  "final_score": 78.1,
-  "classification": "Phishing", 
-  "risk_level": "High",
-  "explanation": "Deep learning model indicates high phishing probability...",
-  "processing_time_ms": 243.5
+  "url": "https://example.com",
+  "classification": "legitimate",
+  "risk_level": "low", 
+  "final_score": 15.2,
+  "deep_learning_probability": 0.12,
+  "heuristic_score": 8.5,
+  "api_score": 0,
+  "explanation": "URL appears legitimate with no suspicious patterns detected"
 }
 ```
 
-### **POST /feedback**
-Submit user feedback for model improvement
+## 🛡️ **Security Features**
 
-```json
-// Request
-{
-  "url": "https://payp4l-security.com/login",
-  "correct_label": 1,
-  "user_comment": "Definitely phishing - fake PayPal domain"
-}
+- Input validation and sanitization
+- Rate limiting protection  
+- Admin authentication system
+- Secure API endpoints
+- Data privacy compliance
 
-// Response
-{
-  "success": true,
-  "message": "Feedback received successfully",
-  "feedback_id": "fb_20260223_171234_567890"
-}
-```
+## 🔧 **Technical Stack**
 
-### **GET /health**
-System health check
+- **Backend**: FastAPI (Python)
+- **AI/ML**: TensorFlow, NumPy, Pandas
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Deployment**: Vercel (Serverless)
+- **APIs**: VirusTotal integration
 
-```json
-{
-  "status": "healthy",
-  "timestamp": "2026-02-23T17:12:34.567890",
-  "components": {
-    "detection_engine": "operational",
-    "ml_model": "loaded",
-    "virustotal_api": "available"
-  }
-}
-```
+## 📝 **License**
 
----
-
-## 🧠 **Risk Scoring Algorithm**
-
-The system uses a **weighted hybrid approach**:
-
-| Component | Weight | Max Score | Description |
-|-----------|--------|-----------|-------------|
-| **Heuristic Analysis** | 40% | 40 points | URL patterns, structure analysis |
-| **Deep Learning** | 40% | 40 points | Bidirectional LSTM prediction |
-| **Threat Intelligence** | 20% | 20 points | VirusTotal API results |
-
-### **Risk Classifications:**
-- **0-30**: 🟢 **Safe** - Legitimate URL
-- **31-60**: 🟡 **Suspicious** - Moderate risk
-- **61-100**: 🔴 **Phishing** - High risk, malicious
-
----
-
-## 🎨 **Frontend Features**
-
-| Feature | Description |
-|---------|-------------|
-| **🎯 URL Analysis** | Real-time phishing detection |
-| **📊 Risk Gauge** | Animated 0-100 risk visualization |
-| **📈 Score Breakdown** | Component-wise analysis display |
-| **💬 Feedback System** | Correct/incorrect classification feedback |
-| **📱 Responsive Design** | Mobile-friendly interface |
-| **⚡ Live Status** | API connectivity monitoring |
-| **🔔 Toast Notifications** | Real-time user feedback |
-
----
-
-## 🚀 **Deployment**
-
-### **Backend Deployment** (Render/Railway)
-
-```bash
-# 1. Create requirements.txt (already included)
-# 2. Configure environment variables
-# 3. Deploy with:
-
-# For Render.com:
-# Build Command: pip install -r requirements.txt
-# Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
-
-# For Railway:
-# Will auto-detect FastAPI and deploy
-```
-
-### **Frontend Deployment** (Vercel)
-
-```bash
-# 1. Upload frontend/ folder to Vercel
-# 2. Configure build settings:
-#    - Build Command: (none needed)
-#    - Output Directory: .
-# 3. Update API_BASE_URL in script.js to your backend URL
-```
-
-### **Docker Deployment**
-
-```dockerfile
-# Dockerfile (create this file)
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 8000
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
----
-
-## 🔧 **Configuration Options**
-
-### **Environment Variables**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VIRUSTOTAL_API_KEY` | None | VirusTotal API key (optional) |
-| `API_HOST` | 0.0.0.0 | FastAPI host |
-| `API_PORT` | 8000 | FastAPI port |
-| `ML_MAX_URL_LENGTH` | 200 | Max URL length for ML model |
-| `DATASET_SIZE` | 5000 | Generated dataset size |
-| `FEEDBACK_RETRAIN_THRESHOLD` | 50 | Feedback count for retraining |
-
-### **Model Configuration**
-
-```python
-# Modify in models/train_model.py
-PhishingModelTrainer(
-    max_url_length=200,    # Maximum URL length
-    vocab_size=10000       # Vocabulary size
-)
-```
-
----
-
-## 📊 **Performance Metrics**
-
-| Metric | Value |
-|--------|--------|
-| **Model Accuracy** | 94.2% |
-| **Precision** | 93.8% |
-| **Recall** | 94.6% |
-| **F1 Score** | 94.2% |
-| **API Response Time** | <500ms |
-| **Dataset Size** | 5,000+ URLs |
-
----
-
-## 🧪 **Testing**
-
-```bash
-# Run system tests
-python -m pytest tests/
-
-# Test API endpoints
-python test_api_client.py
-
-# Manual testing URLs
-python -c "
-from services.detection_engine import HybridDetectionEngine
-engine = HybridDetectionEngine()
-result = engine.analyze_url('http://payp4l-login.suspicious.com')
-print(result)
-"
-```
-
----
+MIT License - See LICENSE file for details
 
 ## 🤝 **Contributing**
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)  
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
 ---
 
-## 📝 **Technical Details**
-
-### **Deep Learning Architecture**
-- **Input Layer**: Character-level tokenization
-- **Embedding Layer**: 128-dimensional embeddings
-- **LSTM Layers**: Bidirectional LSTM (64 + 32 units)
-- **Dense Layers**: 64 → 32 → 1 (sigmoid activation)
-- **Regularization**: Dropout (0.3-0.4) + Early stopping
-
-### **Heuristic Rules**
-1. URL length analysis
-2. Hyphen count detection  
-3. IP address detection
-4. Suspicious keyword matching
-5. Subdomain depth analysis
-6. Suspicious TLD detection
-7. Phishing pattern matching
-8. HTTPS usage analysis
-
----
-
-## 🛡️ **Security Considerations**
-
-- Input validation and sanitization
-- Rate limiting (configurable)
-- CORS protection
-- API key security
-- Data privacy compliance
-- Secure model deployment
-
----
-
-## 📄 **License**
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🏆 **Hackathon Ready**
-
-This system is designed for **hackathon demonstrations** with:
-
-- ✅ **Complete functionality** out of the box
-- ✅ **Professional UI/UX** design
-- ✅ **Production-ready architecture**
-- ✅ **Comprehensive documentation**
-- ✅ **Easy deployment** process
-- ✅ **Live demo capabilities**
-
----
-
-## 📞 **Support & Contact**
-
-For questions, issues, or contributions:
-
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
-- 📧 **Email**: your-email@domain.com
-
----
-
-**⭐ Star this repository if you found it helpful!**
-
----
-
-*Built with ❤️ for cybersecurity and AI innovation*
+**🚀 Ready to deploy!** This repository contains only production-ready code without configuration files or sensitive data.

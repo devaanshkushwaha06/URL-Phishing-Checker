@@ -1,9 +1,6 @@
-# AI Phishing Detection System - Git Ignore File
+# AI Phishing Detection System - Deployment Focused Git Ignore
 # 
-# ⚠️  SECURITY WARNING ⚠️
-# This file prevents sensitive environment files, passwords, and API keys 
-# from being committed to the repository. NEVER commit actual .env files!
-# Only .env.example and .env.template files should be tracked.
+# Clean deployment repository - excludes all local config and data files
 #
 
 # ============================================================================
@@ -45,59 +42,51 @@ venv.bak/
 conda-meta/
 
 # ============================================================================
-# ENVIRONMENT & CONFIGURATION - NEVER COMMIT THESE!
+# LOCAL CONFIGURATION - HANDLED LOCALLY/ON VERCEL
 # ============================================================================
-# Environment files with secrets
-.env
-.env.*
-!.env.example
-!.env.template
-*.env
-!*.env.example
-!*.env.template
-
-# Admin configuration files (contain passwords/secrets)
-admin_config.env
-admin_config.*.env
-.admin_env
-admin_credentials.*
-admin_passwords.*
-.admin_settings
-
-# Configuration files that may contain secrets
+# All environment files (user handles locally)
+.env*
+admin_config.*
 config.json
 secrets.json
-.secrets
-.config.json
 credentials.json
-auth.json
-admin_tokens.*
-api_keys.txt
 
 # ============================================================================
-# MACHINE LEARNING MODELS
+# LOCAL DATA & RUNTIME FILES  
+# ============================================================================
+# Data files (created by application at runtime)
+data/
+logs/
+*.log
+
+# ============================================================================
+# MACHINE LEARNING MODELS (Generated at runtime)
 # ============================================================================
 models/*.h5
 models/*.pkl
 models/*.joblib
 models/*.bin
 models/checkpoints/
-models/logs/
-models/tensorboard/
-models/saved_models/
-
-# Keep metadata and training scripts
-!models/train_model.py
-!models/*.json
-!models/README.md
 
 # ============================================================================
-# DATASETS & DATA FILES
+# DEVELOPMENT & IDE
 # ============================================================================
-data/*.csv
-data/*.json
-data/*.parquet
-data/*.pickle
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# OS FILES
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 data/raw/
 data/processed/
 data/cache/
