@@ -502,11 +502,7 @@ async def global_exception_handler(request, exc):
         content={"success": False, "error": "Internal server error", "detail": str(exc)}
     )
 
-# Vercel serverless handler using Mangum
-try:
-    from mangum import Mangum
-    handler = Mangum(app, lifespan="off")
-    logger.info("Mangum handler created successfully")
-except ImportError:
-    logger.warning("Mangum not available, using app directly")
-    handler = app
+# Vercel serverless deployment
+# Vercel's @vercel/python runtime auto-detects the FastAPI `app` variable as ASGI
+# No additional handler wrapper needed
+logger.info("FastAPI app ready for Vercel serverless deployment")
