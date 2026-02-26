@@ -214,7 +214,8 @@ function displayResults(result) {
     // Animate score breakdowns
     setTimeout(() => {
         animateScoreBar(elements.mlScoreFill, elements.mlScoreValue, 
-                       result.deep_learning_probability * 100, '%');
+                       result.deep_learning_probability * 100, 
+                       `${(result.deep_learning_probability * 100).toFixed(1)}%`);
         
         animateScoreBar(elements.heuristicScoreFill, elements.heuristicScoreValue, 
                        (result.heuristic_score / 40) * 100, `${result.heuristic_score.toFixed(1)}/40`);

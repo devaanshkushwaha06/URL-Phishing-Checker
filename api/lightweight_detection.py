@@ -80,14 +80,18 @@ class LightweightDetectionEngine:
             # Check if domain is IP address
             heuristic_scores['ip_address'] = self._check_ip_address(domain)
             
-            # Calculate final heuristic score (0-40)
-            heuristic_score = sum(heuristic_scores.values())
+            # Calculate final heuristic score, capped at 40
+            heuristic_score = min(sum(heuristic_scores.values()), 40)
             
-            # Get VirusTotal score if available
+            # Get VirusTotal score if available, scaled to 0-20
             api_score = self._check_virustotal(url) if self.api_key else 0
             
-            # Calculate final score (0-100)
-            final_score = min(heuristic_score + api_score, 100)
+            # Scale to 0-100 (max raw = 40 heuristic + 20 VT = 60)
+            raw_score = heuristic_score + api_score
+            final_score = min(round(raw_score / 60 * 100), 100)
+            
+            # Use final_score as deep_learning_probability proxy (0.0 - 1.0)
+            deep_learning_probability = round(final_score / 100, 4)
             
             # Determine classification and risk level
             if final_score >= 70:
@@ -110,7 +114,7 @@ class LightweightDetectionEngine:
                 'timestamp': datetime.now().isoformat(),
                 'url': url,
                 'domain': domain,
-                'deep_learning_probability': 0.0,  # Not available in lightweight version
+                'deep_learning_probability': deep_learning_probability,
                 'heuristic_score': heuristic_score,
                 'api_score': api_score,
                 'final_score': final_score,
@@ -236,7 +240,7 @@ class LightweightDetectionEngine:
                     total = result.get('total', 1)
                     
                     if positives > 0:
-                        return min((positives / total) * 60, 60)  # Scale to 0-60
+                        return min((positives / total) * 20, 20)  # Scale to 0-20
             
         except Exception as e:
             logger.warning(f"VirusTotal API error: {e}")
