@@ -21,7 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 # Import detection engine
 try:
@@ -70,7 +70,8 @@ detection_engine = None
 class URLScanRequest(BaseModel):
     url: str
     
-    @validator('url')
+    @field_validator('url')
+    @classmethod
     def validate_url(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError('URL cannot be empty')
@@ -106,13 +107,15 @@ class FeedbackRequest(BaseModel):
     confidence_level: Optional[int] = None  # 1-5 rating for validation
     user_expertise: Optional[str] = None    # beginner, intermediate, expert
     
-    @validator('correct_label')
+    @field_validator('correct_label')
+    @classmethod
     def validate_label(cls, v):
         if v not in [0, 1]:
             raise ValueError('correct_label must be 0 (legitimate) or 1 (phishing)')
         return v
     
-    @validator('confidence_level')
+    @field_validator('confidence_level')
+    @classmethod
     def validate_confidence(cls, v):
         if v is not None and (v < 1 or v > 5):
             raise ValueError('confidence_level must be between 1 and 5')
