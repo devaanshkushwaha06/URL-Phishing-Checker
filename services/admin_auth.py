@@ -19,6 +19,10 @@ class AdminAuthService:
     """Secure admin authentication service"""
     
     def __init__(self, config_file: str = "admin_config.env"):
+        # Resolve config path: prefer project root (two levels up from services/)
+        if not os.path.isabs(config_file):
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_file = os.path.join(project_root, config_file)
         self.config_file = config_file
         self.failed_attempts = {}  # username -> {count, last_attempt}
         self.active_sessions = {}  # token -> {username, expiry}

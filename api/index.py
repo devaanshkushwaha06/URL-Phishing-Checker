@@ -16,12 +16,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Add the project root to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
+
+# Import admin router
+try:
+    from services.admin_api import admin_router
+    logger.info("Successfully imported admin_router")
+except ImportError as e:
+    logger.warning(f"Could not import admin_router: {e}")
+    admin_router = None
 
 # Import detection engine
 try:
@@ -62,6 +71,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount admin router
+if admin_router:
+    app.include_router(admin_router)
+    logger.info("Admin router mounted at /admin")
 
 # Global detection engine
 detection_engine = None
