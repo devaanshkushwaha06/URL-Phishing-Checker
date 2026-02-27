@@ -1,6 +1,6 @@
 """
 Lightweight Detection Engine for Serverless Deployment
-Purpose: Simplified phishing detection without heavy ML dependencies
+Purpose: Robust heuristic phishing detection without heavy ML dependencies
 """
 
 import re
@@ -9,7 +9,8 @@ import socket
 import requests
 import os
 import logging
-from typing import Dict, Any, Optional
+import math
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -20,93 +21,129 @@ class LightweightDetectionEngine:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('VIRUSTOTAL_API_KEY')
         
-        # Common phishing patterns
-        self.suspicious_patterns = [
-            r'paypal.*secure.*update',
-            r'amazon.*account.*suspended',
-            r'apple.*id.*locked',
-            r'microsoft.*security.*alert',
-            r'google.*verify.*account',
-            r'facebook.*disabled.*account',
-            r'instagram.*suspended.*account',
-            r'twitter.*security.*check',
-            r'linkedin.*account.*restricted',
-            r'dropbox.*storage.*full',
-            r'netflix.*payment.*failed',
-            r'spotify.*premium.*expired'
+        # Brand names commonly impersonated in phishing
+        self.brand_names = [
+            'paypal', 'amazon', 'apple', 'microsoft', 'google', 'facebook',
+            'instagram', 'twitter', 'linkedin', 'dropbox', 'netflix', 'spotify',
+            'chase', 'wellsfargo', 'bankofamerica', 'citibank', 'hsbc',
+            'dhl', 'fedex', 'usps', 'ups', 'walmart', 'ebay', 'adobe',
+            'office365', 'outlook', 'yahoo', 'aol', 'icloud', 'whatsapp',
+            'telegram', 'coinbase', 'binance', 'blockchain', 'steam', 'roblox',
         ]
         
-        # Suspicious TLDs and domains
-        self.suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.top', '.click', '.download', '.work']
-        self.legitimate_domains = ['google.com', 'facebook.com', 'microsoft.com', 'apple.com', 
-                                 'amazon.com', 'paypal.com', 'netflix.com', 'dropbox.com']
+        # Legitimate root domains (exact match only)
+        self.legitimate_domains = {
+            'google.com', 'facebook.com', 'microsoft.com', 'apple.com',
+            'amazon.com', 'paypal.com', 'netflix.com', 'dropbox.com',
+            'github.com', 'linkedin.com', 'twitter.com', 'x.com',
+            'instagram.com', 'youtube.com', 'wikipedia.org', 'reddit.com',
+            'stackoverflow.com', 'yahoo.com', 'bing.com', 'live.com',
+            'outlook.com', 'office.com', 'spotify.com', 'twitch.tv',
+            'adobe.com', 'zoom.us', 'slack.com', 'notion.so',
+            'chase.com', 'wellsfargo.com', 'bankofamerica.com',
+            'ebay.com', 'walmart.com', 'target.com', 'bestbuy.com',
+        }
+        
+        # Suspicious TLDs commonly abused
+        self.suspicious_tlds = [
+            '.tk', '.ml', '.ga', '.cf', '.gq',           # free TLDs
+            '.top', '.click', '.download', '.work',        # cheap TLDs
+            '.buzz', '.xyz', '.club', '.icu', '.cam',      # commonly abused
+            '.loan', '.win', '.bid', '.stream', '.racing', # spam TLDs
+            '.review', '.trade', '.date', '.faith',        # more spam
+            '.zip', '.mov',                                # confusing TLDs
+        ]
+        
+        # Phishing keywords in URL path / params
+        self.phishing_keywords = [
+            'login', 'signin', 'sign-in', 'log-in', 'verify', 'verification',
+            'secure', 'security', 'update', 'confirm', 'account', 'suspend',
+            'locked', 'expired', 'urgent', 'alert', 'warning', 'password',
+            'credential', 'authenticate', 'validate', 'restore', 'recover',
+            'unusual', 'unauthorized', 'billing', 'invoice', 'payment',
+            'wallet', 'bank', 'ssn', 'social-security',
+        ]
+        
+        # URL shortener domains
+        self.shorteners = [
+            'bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'is.gd', 'v.gd',
+            'buff.ly', 'ow.ly', 'short.link', 'rb.gy', 'cutt.ly',
+            'shorturl.at', 'tiny.cc', 'bc.vc', 'x.co',
+        ]
+        
+        # Suspicious patterns (regex)
+        self.brand_phishing_patterns = [
+            r'paypal.*(?:secure|update|verify|login|confirm)',
+            r'amazon.*(?:account|suspend|verify|order)',
+            r'apple.*(?:id|locked|verify|icloud)',
+            r'microsoft.*(?:security|alert|office|login)',
+            r'google.*(?:verify|security|drive|account)',
+            r'facebook.*(?:disabled|account|verify)',
+            r'netflix.*(?:payment|update|billing|account)',
+            r'(?:bank|chase|wells).*(?:secure|verify|login|alert)',
+        ]
+    
+    def _get_root_domain(self, domain: str) -> str:
+        """Extract root domain (e.g., 'www.sub.example.com' -> 'example.com')"""
+        parts = domain.split('.')
+        if len(parts) >= 2:
+            return '.'.join(parts[-2:])
+        return domain
     
     def analyze_url(self, url: str) -> Dict[str, Any]:
-        """
-        Analyze URL for phishing indicators using lightweight heuristics
-        
-        Returns:
-            Dict containing analysis results
-        """
+        """Analyze URL for phishing indicators using lightweight heuristics"""
         start_time = datetime.now()
         
         try:
-            # Parse URL
             parsed = urllib.parse.urlparse(url)
-            domain = parsed.netloc.lower()
+            domain = parsed.netloc.lower().split(':')[0]  # remove port
             path = parsed.path.lower()
+            query = parsed.query.lower()
+            full_url = url.lower()
+            root_domain = self._get_root_domain(domain)
             
-            # Initialize scores
+            # Skip scoring for known-legitimate exact root domains
+            is_known_legit = root_domain in self.legitimate_domains
+            
+            # Run all checks
             heuristic_scores = {
-                'domain_spoofing': 0,
-                'suspicious_patterns': 0,
-                'url_structure': 0,
-                'suspicious_tld': 0,
-                'ip_address': 0
+                'domain_spoofing': self._check_domain_spoofing(domain, root_domain, is_known_legit),
+                'suspicious_patterns': self._check_suspicious_patterns(full_url, domain, path, query),
+                'url_structure': self._check_url_structure(full_url, domain, path, query),
+                'suspicious_tld': self._check_suspicious_tld(domain, root_domain),
+                'ip_address': self._check_ip_address(domain),
             }
             
-            # Check for domain spoofing
-            heuristic_scores['domain_spoofing'] = self._check_domain_spoofing(domain)
+            # Known-legitimate domains get a big reduction (but not zero — spoofed subdomains still count)
+            if is_known_legit:
+                for k in heuristic_scores:
+                    if k != 'domain_spoofing':
+                        heuristic_scores[k] = 0
+                heuristic_scores['domain_spoofing'] = 0
             
-            # Check for suspicious patterns
-            heuristic_scores['suspicious_patterns'] = self._check_suspicious_patterns(url.lower())
-            
-            # Check URL structure
-            heuristic_scores['url_structure'] = self._check_url_structure(url, domain, path)
-            
-            # Check for suspicious TLD
-            heuristic_scores['suspicious_tld'] = self._check_suspicious_tld(domain)
-            
-            # Check if domain is IP address
-            heuristic_scores['ip_address'] = self._check_ip_address(domain)
-            
-            # Calculate final heuristic score, capped at 40
+            # Cap raw heuristic at 40
             heuristic_score = min(sum(heuristic_scores.values()), 40)
             
-            # Get VirusTotal score if available, scaled to 0-20
+            # VirusTotal (0-20)
             api_score = self._check_virustotal(url) if self.api_key else 0
             
-            # Scale to 0-100 (max raw = 40 heuristic + 20 VT = 60)
+            # Final score: map raw (max 60) to 0-100
             raw_score = heuristic_score + api_score
             final_score = min(round(raw_score / 60 * 100), 100)
             
-            # Use final_score as deep_learning_probability proxy (0.0 - 1.0)
             deep_learning_probability = round(final_score / 100, 4)
             
-            # Determine classification and risk level
-            if final_score >= 70:
+            if final_score >= 60:
                 classification = "phishing"
                 risk_level = "high"
-            elif final_score >= 40:
-                classification = "suspicious" 
+            elif final_score >= 35:
+                classification = "suspicious"
                 risk_level = "medium"
             else:
                 classification = "legitimate"
                 risk_level = "low"
             
-            # Generate explanation
             explanation = self._generate_explanation(heuristic_scores, api_score, classification)
-            
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
             
             return {
@@ -127,12 +164,13 @@ class LightweightDetectionEngine:
                     'domain_analysis': {
                         'is_ip': self._is_ip_address(domain),
                         'subdomain_count': len(domain.split('.')) - 2,
-                        'domain_age': 'unknown'  # Would require additional API
+                        'root_domain': root_domain,
+                        'is_known_legitimate': is_known_legit,
                     },
                     'url_features': {
                         'length': len(url),
                         'has_https': url.startswith('https://'),
-                        'suspicious_keywords': len([p for p in self.suspicious_patterns if re.search(p, url.lower())])
+                        'phishing_keyword_count': sum(1 for kw in self.phishing_keywords if kw in full_url),
                     }
                 }
             }
@@ -146,73 +184,179 @@ class LightweightDetectionEngine:
                 'timestamp': datetime.now().isoformat()
             }
     
-    def _check_domain_spoofing(self, domain: str) -> float:
-        """Check for domain spoofing attempts"""
+    # ---------- HEURISTIC CHECKS (each returns 0-20 range, total capped at 40) ----------
+
+    def _check_domain_spoofing(self, domain: str, root_domain: str, is_known_legit: bool) -> float:
+        """Detect brand impersonation and domain spoofing"""
+        if is_known_legit:
+            return 0
+        
         score = 0
         
-        for legit_domain in self.legitimate_domains:
-            if legit_domain in domain and domain != legit_domain:
-                # Check for common spoofing techniques
-                if any(char in domain for char in ['0', '1', '-']):
-                    score += 15  # High suspicion
-                elif domain.replace(legit_domain, '') in ['.com', '.net', '.org', '.co']:
-                    score += 10  # Medium suspicion
-                else:
-                    score += 5   # Low suspicion
+        # Check if any brand name appears in domain but it's NOT the real domain
+        for brand in self.brand_names:
+            brand_real_domain = f"{brand}.com"
+            if brand in domain and root_domain != brand_real_domain:
+                score += 12
+                # Extra penalty if brand is in subdomain (e.g., paypal.evil.com)
+                if brand in domain.replace(root_domain, ''):
+                    score += 5
+                break  # one brand match is enough
+        
+        # Typosquatting: character substitution (0→o, 1→l, etc.)
+        typo_map = {'0': 'o', '1': 'l', '3': 'e', '5': 's', '@': 'a', '!': 'i'}
+        decoded_domain = domain
+        for fake, real in typo_map.items():
+            decoded_domain = decoded_domain.replace(fake, real)
+        
+        if decoded_domain != domain:
+            # After decoding, does it match a brand?
+            for brand in self.brand_names:
+                if brand in decoded_domain and brand not in domain:
+                    score += 15  # strong typosquatting signal
+                    break
+        
+        # Homograph-like: brand name with extra chars (e.g., paypa1, g00gle)
+        for brand in self.brand_names:
+            if len(brand) >= 4:
+                # Check if domain contains most of brand's chars in order (fuzzy)
+                ratio = self._char_match_ratio(brand, domain)
+                if ratio > 0.75 and root_domain != f"{brand}.com":
+                    score += 8
+                    break
+        
+        # Domain contains hyphen-separated brand words (paypal-login.com)
+        for brand in self.brand_names:
+            if re.search(rf'{brand}[\-_]', domain) and root_domain != f"{brand}.com":
+                score += 10
+                break
         
         return min(score, 20)
     
-    def _check_suspicious_patterns(self, url: str) -> float:
-        """Check for suspicious patterns in URL"""
+    def _char_match_ratio(self, brand: str, domain: str) -> float:
+        """Simple fuzzy match: what fraction of brand chars appear in-order in domain"""
+        bi = 0
+        for ch in domain:
+            if bi < len(brand) and ch == brand[bi]:
+                bi += 1
+        return bi / len(brand) if brand else 0
+
+    def _check_suspicious_patterns(self, url: str, domain: str, path: str, query: str) -> float:
+        """Check for phishing patterns in the URL"""
         score = 0
         
-        for pattern in self.suspicious_patterns:
+        # Brand + action patterns (very strong signal)
+        for pattern in self.brand_phishing_patterns:
             if re.search(pattern, url):
-                score += 8
+                score += 10
+                break
+        
+        # Phishing keywords in path or query
+        keyword_hits = sum(1 for kw in self.phishing_keywords if kw in path or kw in query)
+        if keyword_hits >= 3:
+            score += 10
+        elif keyword_hits >= 2:
+            score += 6
+        elif keyword_hits >= 1:
+            score += 3
+        
+        # Data URI or javascript: scheme
+        if url.startswith('data:') or url.startswith('javascript:'):
+            score += 15
+        
+        # Contains @ symbol (credential harvesting trick)
+        if '@' in url and '@' in url.split('//')[1] if '//' in url else False:
+            score += 10
+        
+        # Double slashes in path (redirect trick)
+        if '//' in path:
+            score += 5
+        
+        # Hex/encoded characters abuse
+        pct_encoded = len(re.findall(r'%[0-9A-Fa-f]{2}', url))
+        if pct_encoded > 5:
+            score += 5
+        
+        return min(score, 20)
+
+    def _check_url_structure(self, url: str, domain: str, path: str, query: str) -> float:
+        """Analyze URL structure anomalies"""
+        score = 0
+        
+        # Very long URL
+        if len(url) > 200:
+            score += 5
+        elif len(url) > 100:
+            score += 2
+        
+        # Excessive subdomains (more than 2 levels)
+        subdomain_count = len(domain.split('.')) - 2
+        if subdomain_count >= 4:
+            score += 8
+        elif subdomain_count >= 3:
+            score += 5
+        elif subdomain_count >= 2:
+            score += 2
+        
+        # No HTTPS
+        if not url.startswith('https://'):
+            score += 4
+        
+        # URL shortener
+        for shortener in self.shorteners:
+            if shortener in domain:
+                score += 5
+                break
+        
+        # Deeply nested path (3+ levels)
+        path_depth = len([p for p in path.split('/') if p])
+        if path_depth >= 5:
+            score += 4
+        elif path_depth >= 3:
+            score += 2
+        
+        # Query string with suspicious params
+        if query:
+            susp_params = ['redirect', 'url', 'next', 'return', 'goto', 'dest', 'redir']
+            for p in susp_params:
+                if p in query:
+                    score += 3
+                    break
+        
+        # File extensions in URL that don't belong
+        bad_exts = ['.exe', '.scr', '.zip', '.rar', '.bat', '.cmd', '.msi']
+        for ext in bad_exts:
+            if ext in path:
+                score += 6
+                break
+        
+        # Unusual port
+        if ':' in domain:
+            port = domain.split(':')[1]
+            if port not in ['80', '443', '8080', '8443']:
+                score += 4
         
         return min(score, 15)
     
-    def _check_url_structure(self, url: str, domain: str, path: str) -> float:
-        """Analyze URL structure for suspicious elements"""
-        score = 0
-        
-        # Very long URLs
-        if len(url) > 150:
-            score += 5
-        
-        # Too many subdomains
-        subdomain_count = len(domain.split('.')) - 2
-        if subdomain_count > 3:
-            score += 3
-        
-        # Suspicious keywords in path
-        suspicious_keywords = ['secure', 'verify', 'update', 'suspended', 'locked', 'confirm']
-        for keyword in suspicious_keywords:
-            if keyword in path:
-                score += 2
-        
-        # URL shorteners (basic check)
-        shorteners = ['bit.ly', 'tinyurl', 't.co', 'goo.gl']
-        if any(shortener in domain for shortener in shorteners):
-            score += 3
-        
-        return min(score, 10)
-    
-    def _check_suspicious_tld(self, domain: str) -> float:
+    def _check_suspicious_tld(self, domain: str, root_domain: str) -> float:
         """Check for suspicious top-level domains"""
-        score = 0
-        
         for tld in self.suspicious_tlds:
             if domain.endswith(tld):
-                score += 8
-                break
+                return 12
         
-        return score
+        # Double TLD tricks (e.g., .com.tk)
+        if re.search(r'\.(com|org|net|gov)\.[a-z]{2,}$', domain):
+            return 8
+        
+        return 0
     
     def _check_ip_address(self, domain: str) -> float:
         """Check if domain is an IP address"""
-        if self._is_ip_address(domain):
-            return 12  # High suspicion for IP-based URLs
+        if self._is_ip_address(domain.split(':')[0]):
+            return 15
+        # Hex or octal IP obfuscation
+        if re.match(r'^0x[0-9a-f]+', domain) or re.match(r'^\d{8,}$', domain):
+            return 15
         return 0
     
     def _is_ip_address(self, domain: str) -> bool:
@@ -230,18 +374,18 @@ class LightweightDetectionEngine:
         
         try:
             params = {'apikey': self.api_key, 'resource': url}
-            response = requests.get('https://www.virustotal.com/vtapi/v2/url/report', 
-                                  params=params, timeout=5)
+            response = requests.get(
+                'https://www.virustotal.com/vtapi/v2/url/report',
+                params=params, timeout=5
+            )
             
             if response.status_code == 200:
                 result = response.json()
                 if result.get('response_code') == 1:
                     positives = result.get('positives', 0)
                     total = result.get('total', 1)
-                    
                     if positives > 0:
-                        return min((positives / total) * 20, 20)  # Scale to 0-20
-            
+                        return min((positives / total) * 20, 20)
         except Exception as e:
             logger.warning(f"VirusTotal API error: {e}")
         
@@ -249,28 +393,26 @@ class LightweightDetectionEngine:
     
     def _generate_explanation(self, scores: Dict[str, float], api_score: float, classification: str) -> str:
         """Generate human-readable explanation"""
-        explanations = []
+        parts = []
         
         if classification == "phishing":
-            explanations.append("🚨 HIGH RISK: This URL shows strong indicators of being a phishing attempt.")
+            parts.append("🚨 HIGH RISK: This URL shows strong indicators of being a phishing attempt.")
         elif classification == "suspicious":
-            explanations.append("⚠️ SUSPICIOUS: This URL has some concerning characteristics.")
+            parts.append("⚠️ SUSPICIOUS: This URL has concerning characteristics.")
         else:
-            explanations.append("✅ LEGITIMATE: This URL appears to be safe.")
+            parts.append("✅ LEGITIMATE: This URL appears to be safe.")
         
-        if scores['domain_spoofing'] > 0:
-            explanations.append("Domain spoofing detected - mimics legitimate brands.")
-        
-        if scores['suspicious_patterns'] > 0:
-            explanations.append("Contains suspicious keywords commonly used in phishing.")
-        
-        if scores['ip_address'] > 0:
-            explanations.append("Uses IP address instead of domain name.")
-        
-        if scores['suspicious_tld'] > 0:
-            explanations.append("Uses suspicious top-level domain.")
-        
+        if scores.get('domain_spoofing', 0) > 0:
+            parts.append("Domain impersonates a well-known brand.")
+        if scores.get('suspicious_patterns', 0) > 0:
+            parts.append("Contains phishing keywords or patterns.")
+        if scores.get('ip_address', 0) > 0:
+            parts.append("Uses an IP address instead of a domain name.")
+        if scores.get('suspicious_tld', 0) > 0:
+            parts.append("Uses a top-level domain commonly abused in phishing.")
+        if scores.get('url_structure', 0) > 0:
+            parts.append("URL structure has anomalous characteristics.")
         if api_score > 0:
-            explanations.append("Flagged by external threat intelligence.")
+            parts.append("Flagged by external threat intelligence.")
         
-        return " ".join(explanations)
+        return " ".join(parts)
