@@ -40,10 +40,10 @@ class AdminAuthService:
         logger.info("Admin authentication service initialized")
     
     def _load_config(self) -> Dict[str, str]:
-        """Load admin configuration from environment file"""
+        """Load admin configuration from environment file and/or environment variables"""
         config = {}
         
-        # Check if config file exists
+        # 1. Load from file first (lowest priority)
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, 'r') as f:
@@ -51,28 +51,33 @@ class AdminAuthService:
                         line = line.strip()
                         if line and not line.startswith('#') and '=' in line:
                             key, value = line.split('=', 1)
-                            # Remove inline comments
                             value = value.split('#')[0].strip()
                             config[key.strip()] = value
                 logger.info(f"Loaded admin config from {self.config_file}")
             except Exception as e:
                 logger.error(f"Error loading config file {self.config_file}: {e}")
         else:
-            logger.warning(f"Config file {self.config_file} not found, using defaults")
+            logger.warning(f"Config file {self.config_file} not found, checking environment variables")
         
-        # Set defaults if not provided
+        # 2. Override with actual environment variables (higher priority — works on Vercel)
+        for key in ['ADMIN_USERNAME', 'ADMIN_PASSWORD', 'ADMIN_TOKEN_SECRET',
+                    'MAX_LOGIN_ATTEMPTS', 'LOGIN_TIMEOUT_MINUTES', 'ADMIN_SESSION_TIMEOUT']:
+            env_val = os.environ.get(key)
+            if env_val:
+                config[key] = env_val
+        
+        # 3. Set hardcoded defaults only if still missing
         if 'ADMIN_USERNAME' not in config:
             config['ADMIN_USERNAME'] = 'admin'
-            logger.warning("Using default admin username. Change this for production!")
         
         if 'ADMIN_PASSWORD' not in config:
-            config['ADMIN_PASSWORD'] = 'admin123'
-            logger.warning("Using default admin password. Change this for production!")
+            config['ADMIN_PASSWORD'] = 'SecureAdmin123!'
+            logger.info("Using built-in default password")
         
         if 'ADMIN_TOKEN_SECRET' not in config:
             config['ADMIN_TOKEN_SECRET'] = secrets.token_urlsafe(32)
-            logger.warning("Generated random token secret. Consider setting a fixed one in config.")
         
+        logger.info(f"Admin auth configured for user: {config.get('ADMIN_USERNAME')}")
         return config
     
     def authenticate(self, username: str, password: str) -> Dict[str, Any]:
