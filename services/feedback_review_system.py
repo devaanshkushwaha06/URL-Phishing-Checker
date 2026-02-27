@@ -26,15 +26,32 @@ class FeedbackReviewSystem:
     """Enhanced feedback system with review capabilities"""
     
     def __init__(self, data_dir: str = "data"):
-        self.data_dir = data_dir
-        self.pending_file = os.path.join(data_dir, "pending_feedback.json")
-        self.reviewed_file = os.path.join(data_dir, "reviewed_feedback.json") 
-        self.rejected_file = os.path.join(data_dir, "rejected_feedback.json")
-        self.admin_decisions_file = os.path.join(data_dir, "admin_decisions.json")
-        self.quality_metrics_file = os.path.join(data_dir, "quality_metrics.json")
-        
-        # Ensure data directory exists
-        os.makedirs(data_dir, exist_ok=True)
+        # On read-only filesystems (Vercel), fall back to /tmp
+        if not os.path.isabs(data_dir):
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            abs_data_dir = os.path.join(project_root, data_dir)
+        else:
+            abs_data_dir = data_dir
+
+        # Test writability; use /tmp on read-only filesystems (e.g. Vercel)
+        try:
+            os.makedirs(abs_data_dir, exist_ok=True)
+            test_file = os.path.join(abs_data_dir, '.write_test')
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            self.data_dir = abs_data_dir
+        except (PermissionError, OSError):
+            import tempfile
+            self.data_dir = os.path.join(tempfile.gettempdir(), 'phishing_data')
+            os.makedirs(self.data_dir, exist_ok=True)
+            logger.warning(f"Data dir not writable, using temp: {self.data_dir}")
+
+        self.pending_file = os.path.join(self.data_dir, "pending_feedback.json")
+        self.reviewed_file = os.path.join(self.data_dir, "reviewed_feedback.json")
+        self.rejected_file = os.path.join(self.data_dir, "rejected_feedback.json")
+        self.admin_decisions_file = os.path.join(self.data_dir, "admin_decisions.json")
+        self.quality_metrics_file = os.path.join(self.data_dir, "quality_metrics.json")
         
     def submit_user_feedback(self, 
                            url: str, 

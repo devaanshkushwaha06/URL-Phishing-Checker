@@ -28,7 +28,7 @@ from pydantic import BaseModel, field_validator
 try:
     from services.admin_api import admin_router
     logger.info("Successfully imported admin_router")
-except ImportError as e:
+except Exception as e:
     logger.warning(f"Could not import admin_router: {e}")
     admin_router = None
 
