@@ -298,11 +298,11 @@ class FeedbackValidator:
         }
         
         # Check user confidence level
-        confidence = feedback_data.get('confidence_level', 3)
+        confidence = feedback_data.get('confidence_level') or 3
         validation_result['confidence_score'] += confidence * 20
         
         # Check user expertise
-        expertise = feedback_data.get('user_expertise', 'beginner')
+        expertise = feedback_data.get('user_expertise') or 'beginner'
         expertise_weights = {'expert': 40, 'intermediate': 25, 'beginner': 10}
         validation_result['confidence_score'] += expertise_weights.get(expertise, 10)
         
