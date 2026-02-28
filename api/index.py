@@ -33,16 +33,18 @@ except Exception as e:
     admin_router = None
 
 # Import detection engine
+_engine_source = "none"
 try:
     from api.lightweight_detection import LightweightDetectionEngine as DetectionEngine
-    logger.info("Successfully imported lightweight_detection from api package")
-except ImportError:
+    _engine_source = "api.lightweight_detection"
+    logger.info("Imported DetectionEngine from api.lightweight_detection")
+except Exception:
     try:
         from lightweight_detection import LightweightDetectionEngine as DetectionEngine
-        logger.info("Successfully imported lightweight_detection directly")
-    except ImportError as e:
-        # Fallback for serverless environment
-        logger.warning(f"Could not import DetectionEngine: {e}. Using mock fallback.")
+        _engine_source = "lightweight_detection"
+        logger.info("Imported DetectionEngine from lightweight_detection (direct)")
+    except Exception as e:
+        logger.error(f"FAILED to import DetectionEngine: {e}")
         DetectionEngine = None
 
 # Initialize FastAPI app
@@ -423,22 +425,28 @@ async def submit_feedback(request: FeedbackRequest):
 async def health_check():
     """Health check endpoint - simplified for serverless"""
     try:
+        engine = get_detection_engine()
+        engine_type = type(engine).__name__
         return {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
-            "version": "1.0.0",
+            "version": "2.1.0",
+            "build": "2026-02-28",
             "components": {
                 "api": "operational",
-                "detection_engine": "mock_fallback" if DetectionEngine is None else "operational",
+                "detection_engine": engine_type,
+                "engine_source": _engine_source,
+                "admin_router": "loaded" if admin_router else "not_loaded",
                 "environment": "serverless"
             }
         }
     except Exception as e:
         logger.error(f"Health check error: {e}")
         return {
-            "status": "healthy",
+            "status": "degraded",
             "timestamp": datetime.now().isoformat(),
-            "version": "1.0.0"
+            "version": "2.1.0",
+            "error": str(e)
         }
 
 @app.get("/api/feedback/pending")
