@@ -25,6 +25,12 @@ class FeedbackStatus(Enum):
 class FeedbackReviewSystem:
     """Enhanced feedback system with review capabilities"""
     
+    # Class-level in-memory store (shared across all instances in the same process)
+    # This works as a reliable fallback on Vercel where /tmp is per-instance ephemeral
+    _memory_pending: List[Dict[str, Any]] = []
+    _memory_reviewed: List[Dict[str, Any]] = []
+    _memory_rejected: List[Dict[str, Any]] = []
+    
     def __init__(self, data_dir: str = "data"):
         # On read-only filesystems (Vercel), fall back to /tmp
         if not os.path.isabs(data_dir):
@@ -217,24 +223,34 @@ class FeedbackReviewSystem:
         return False
     
     def get_pending_feedback(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get feedback awaiting review"""
+        """Get feedback awaiting review — merges in-memory and file stores"""
         try:
-            if os.path.exists(self.pending_file):
-                with open(self.pending_file, 'r') as f:
-                    all_feedback = json.load(f)
-                
-                # Filter pending and flagged items
-                pending = [f for f in all_feedback 
-                          if f.get("status") in [FeedbackStatus.PENDING.value, FeedbackStatus.FLAGGED.value]]
-                
-                # Sort by timestamp (oldest first) and flagged items first
-                pending.sort(key=lambda x: (
-                    0 if x.get("status") == FeedbackStatus.FLAGGED.value else 1,
-                    x.get("timestamp", "")
-                ))
-                
-                return pending[:limit]
-            return []
+            # Start with class-level memory store
+            all_feedback: List[Dict[str, Any]] = list(FeedbackReviewSystem._memory_pending)
+            
+            # Also try file store and merge (avoiding duplicates by feedback_id)
+            try:
+                if os.path.exists(self.pending_file):
+                    with open(self.pending_file, 'r') as f:
+                        file_items = json.load(f)
+                    existing_ids = {item.get('feedback_id') for item in all_feedback}
+                    for item in file_items:
+                        if item.get('feedback_id') not in existing_ids:
+                            all_feedback.append(item)
+            except Exception as fe:
+                logger.warning(f"Could not read pending file (using memory store only): {fe}")
+            
+            # Filter pending and flagged items
+            pending = [f for f in all_feedback 
+                      if f.get("status") in [FeedbackStatus.PENDING.value, FeedbackStatus.FLAGGED.value]]
+            
+            # Sort: flagged first, then oldest first
+            pending.sort(key=lambda x: (
+                0 if x.get("status") == FeedbackStatus.FLAGGED.value else 1,
+                x.get("timestamp", "")
+            ))
+            
+            return pending[:limit]
         except Exception as e:
             logger.error(f"Error loading pending feedback: {e}")
             return []
@@ -248,15 +264,22 @@ class FeedbackReviewSystem:
         Admin reviews and decides on feedback
         """
         try:
-            # Load pending feedback
+            # Load pending feedback from file
             pending_feedback = self._load_json_file(self.pending_file, [])
             feedback_item = None
             
-            # Find the feedback item
+            # Find the feedback item in file store
             for i, item in enumerate(pending_feedback):
                 if item["feedback_id"] == feedback_id:
                     feedback_item = pending_feedback.pop(i)
                     break
+            
+            # If not in file, look in class-level memory store
+            if not feedback_item:
+                for item in FeedbackReviewSystem._memory_pending:
+                    if item.get("feedback_id") == feedback_id:
+                        feedback_item = item
+                        break
                     
             if not feedback_item:
                 return {"success": False, "message": "Feedback not found"}
@@ -289,9 +312,18 @@ class FeedbackReviewSystem:
             }
             self._log_admin_decision(admin_decision_log)
             
+            # Remove reviewed item from class-level memory store
+            FeedbackReviewSystem._memory_pending = [
+                item for item in FeedbackReviewSystem._memory_pending
+                if item.get('feedback_id') != feedback_id
+            ]
+            
             # Update pending feedback file
-            with open(self.pending_file, 'w') as f:
-                json.dump(pending_feedback, f, indent=2)
+            try:
+                with open(self.pending_file, 'w') as f:
+                    json.dump(pending_feedback, f, indent=2)
+            except Exception as fe:
+                logger.warning(f"Could not update pending file: {fe}")
             
             # Update quality metrics
             self._update_quality_metrics(admin_decision)
@@ -335,12 +367,18 @@ class FeedbackReviewSystem:
             return {"error": str(e)}
     
     def _save_pending_feedback(self, feedback_data: Dict[str, Any]):
-        """Save feedback to pending file"""
-        pending_feedback = self._load_json_file(self.pending_file, [])
-        pending_feedback.append(feedback_data)
+        """Save feedback to pending file and in-memory store"""
+        # Always save to class-level memory (reliable on Vercel)
+        FeedbackReviewSystem._memory_pending.append(feedback_data)
         
-        with open(self.pending_file, 'w') as f:
-            json.dump(pending_feedback, f, indent=2)
+        # Also try file storage as secondary backup
+        try:
+            pending_feedback = self._load_json_file(self.pending_file, [])
+            pending_feedback.append(feedback_data)
+            with open(self.pending_file, 'w') as f:
+                json.dump(pending_feedback, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not write to pending file (using memory store): {e}")
     
     def _save_reviewed_feedback(self, feedback_data: Dict[str, Any]):
         """Save reviewed feedback"""

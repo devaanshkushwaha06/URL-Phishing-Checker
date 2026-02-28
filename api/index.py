@@ -24,13 +24,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
 
-# Import admin router
+# Import admin router and review_system
 try:
-    from services.admin_api import admin_router
-    logger.info("Successfully imported admin_router")
+    from services.admin_api import admin_router, review_system as _review_system
+    logger.info("Successfully imported admin_router and review_system")
 except Exception as e:
     logger.warning(f"Could not import admin_router: {e}")
     admin_router = None
+    _review_system = None
 
 # Import detection engine
 _engine_source = "none"
@@ -403,8 +404,17 @@ async def submit_feedback(request: FeedbackRequest):
             'validation_notes': validation_result['validation_notes']
         })
         
-        # Save feedback with validation info
-        save_feedback_with_validation(feedback_data)
+        # Save feedback — use review_system so admin dashboard can see it
+        if _review_system is not None:
+            _review_system._save_pending_feedback(feedback_data)
+        else:
+            # Fallback: save directly to class-level memory store
+            try:
+                from services.feedback_review_system import FeedbackReviewSystem as _FRS
+                _FRS._memory_pending.append(feedback_data)
+            except Exception as fe:
+                logger.warning(f"Could not save feedback to memory store: {fe}")
+        logger.info(f"Feedback saved: {feedback_id} - Status: {validation_status}")
         
         response = FeedbackResponse(
             success=True,
