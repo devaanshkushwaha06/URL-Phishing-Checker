@@ -372,7 +372,10 @@
         <div class="feedback-panel" style="margin-top:2rem;">
             <div class="panel-header">
                 <h2 class="panel-title">✅ Approved Dataset</h2>
-                <button onclick="loadApprovedDataset()" class="refresh-btn">Refresh</button>
+                <div style="display:flex;gap:0.5rem;">
+                    <button onclick="loadApprovedDataset()" class="refresh-btn">Refresh</button>
+                    <button onclick="downloadApprovedCSV()" class="refresh-btn" style="background:#51cf66;">&#8659; Download CSV</button>
+                </div>
             </div>
             <div id="approved-count" style="color:#51cf66;font-weight:bold;margin-bottom:1rem;">Loading...</div>
             <div id="approved-container" style="overflow-x:auto;">
@@ -592,6 +595,36 @@
                 batchActions.classList.add('active');
             } else {
                 batchActions.classList.remove('active');
+            }
+        }
+
+        async function downloadApprovedCSV() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/approved-dataset`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!response.ok) throw new Error('Failed');
+                const data = await response.json();
+                const entries = data.entries || [];
+                if (entries.length === 0) {
+                    showNotification('No approved entries to download yet.', 'error');
+                    return;
+                }
+                const headers = ['url', 'label', 'source', 'feedback_id', 'timestamp'];
+                const csvRows = [headers.join(',')];
+                for (const e of entries) {
+                    csvRows.push(headers.map(h => `"${(e[h] ?? '').toString().replace(/"/g, '""')}"`).join(','));
+                }
+                const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `approved_feedback_dataset_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showNotification(`Downloaded ${entries.length} entries as CSV`, 'success');
+            } catch (e) {
+                showNotification('Download failed', 'error');
             }
         }
 
