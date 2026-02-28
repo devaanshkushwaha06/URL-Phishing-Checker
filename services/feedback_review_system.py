@@ -25,11 +25,15 @@ class FeedbackStatus(Enum):
 class FeedbackReviewSystem:
     """Enhanced feedback system with review capabilities"""
     
-    # Class-level in-memory store (shared across all instances in the same process)
-    # This works as a reliable fallback on Vercel where /tmp is per-instance ephemeral
+    # Class-level in-memory stores (shared across all instances in the same process)
+    # Reliable fallback on Vercel where /tmp is per-instance ephemeral
     _memory_pending: List[Dict[str, Any]] = []
     _memory_reviewed: List[Dict[str, Any]] = []
     _memory_rejected: List[Dict[str, Any]] = []
+    _memory_approved_dataset: List[Dict[str, Any]] = []  # approved_feedback_dataset entries
+    _memory_quality_metrics: Dict[str, Any] = {
+        "total_reviewed": 0, "approved": 0, "rejected": 0, "approval_rate": 0.0
+    }
     
     def __init__(self, data_dir: str = "data"):
         # On read-only filesystems (Vercel), fall back to /tmp
@@ -351,8 +355,10 @@ class FeedbackReviewSystem:
                                     key=lambda x: x.get("timestamp", ""), 
                                     reverse=True)[:10]
             
-            # Get quality metrics
+            # Get quality metrics — prefer file, fall back to in-memory
             quality_metrics = self._load_json_file(self.quality_metrics_file, {})
+            if not quality_metrics:
+                quality_metrics = dict(FeedbackReviewSystem._memory_quality_metrics)
             
             return {
                 "pending_count": pending_count,
@@ -381,33 +387,45 @@ class FeedbackReviewSystem:
             logger.warning(f"Could not write to pending file (using memory store): {e}")
     
     def _save_reviewed_feedback(self, feedback_data: Dict[str, Any]):
-        """Save reviewed feedback"""
-        reviewed_feedback = self._load_json_file(self.reviewed_file, [])
-        reviewed_feedback.append(feedback_data)
-        
-        with open(self.reviewed_file, 'w') as f:
-            json.dump(reviewed_feedback, f, indent=2)
+        """Save reviewed feedback to memory and file"""
+        FeedbackReviewSystem._memory_reviewed.append(feedback_data)
+        try:
+            reviewed_feedback = self._load_json_file(self.reviewed_file, [])
+            reviewed_feedback.append(feedback_data)
+            with open(self.reviewed_file, 'w') as f:
+                json.dump(reviewed_feedback, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not write reviewed file (using memory): {e}")
     
     def _save_rejected_feedback(self, feedback_data: Dict[str, Any]):
-        """Save rejected feedback"""
-        rejected_feedback = self._load_json_file(self.rejected_file, [])
-        rejected_feedback.append(feedback_data)
-        
-        with open(self.rejected_file, 'w') as f:
-            json.dump(rejected_feedback, f, indent=2)
+        """Save rejected feedback to memory and file"""
+        FeedbackReviewSystem._memory_rejected.append(feedback_data)
+        try:
+            rejected_feedback = self._load_json_file(self.rejected_file, [])
+            rejected_feedback.append(feedback_data)
+            with open(self.rejected_file, 'w') as f:
+                json.dump(rejected_feedback, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not write rejected file (using memory): {e}")
     
     def _add_to_training_dataset(self, feedback_data: Dict[str, Any]):
-        """Add approved feedback to training dataset"""
+        """Add approved feedback to training dataset (memory + CSV file)"""
+        new_entry = {
+            'url': feedback_data['url'],
+            'label': feedback_data['correct_label'],
+            'source': 'user_feedback',
+            'feedback_id': feedback_data['feedback_id'],
+            'timestamp': feedback_data['timestamp']
+        }
+        
+        # Always store in class-level memory (works on Vercel)
+        existing_urls = {e['url'] for e in FeedbackReviewSystem._memory_approved_dataset}
+        if new_entry['url'] not in existing_urls:
+            FeedbackReviewSystem._memory_approved_dataset.append(new_entry)
+        
+        # Try writing to CSV file
         try:
             dataset_file = os.path.join(self.data_dir, "approved_feedback_dataset.csv")
-            
-            new_entry = {
-                'url': feedback_data['url'],
-                'label': feedback_data['correct_label'],
-                'source': 'user_feedback',
-                'feedback_id': feedback_data['feedback_id'],
-                'timestamp': feedback_data['timestamp']
-            }
             
             if os.path.exists(dataset_file):
                 df = pd.read_csv(dataset_file)
@@ -417,11 +435,9 @@ class FeedbackReviewSystem:
             df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
             df = df.drop_duplicates(subset=['url'], keep='last')
             df.to_csv(dataset_file, index=False)
-            
-            logger.info(f"Added feedback to training dataset: {feedback_data['feedback_id']}")
-            
+            logger.info(f"Added feedback to training dataset CSV: {feedback_data['feedback_id']}")
         except Exception as e:
-            logger.error(f"Error adding to training dataset: {e}")
+            logger.warning(f"Could not write to dataset CSV (saved in memory): {e}")
     
     def _log_feedback_submission(self, feedback_data: Dict[str, Any]):
         """Log feedback submission"""
@@ -429,31 +445,41 @@ class FeedbackReviewSystem:
     
     def _log_admin_decision(self, decision_data: Dict[str, Any]):
         """Log admin decision"""
-        decisions = self._load_json_file(self.admin_decisions_file, [])
-        decisions.append(decision_data)
-        
-        with open(self.admin_decisions_file, 'w') as f:
-            json.dump(decisions, f, indent=2)
+        try:
+            decisions = self._load_json_file(self.admin_decisions_file, [])
+            decisions.append(decision_data)
+            with open(self.admin_decisions_file, 'w') as f:
+                json.dump(decisions, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not write admin decisions file: {e}")
     
     def _update_quality_metrics(self, decision: str):
-        """Update quality metrics"""
-        metrics = self._load_json_file(self.quality_metrics_file, {
-            "total_reviewed": 0,
-            "approved": 0,
-            "rejected": 0,
-            "approval_rate": 0.0
-        })
-        
-        metrics["total_reviewed"] += 1
+        """Update quality metrics in memory and file"""
+        # Update class-level in-memory metrics
+        m = FeedbackReviewSystem._memory_quality_metrics
+        m["total_reviewed"] += 1
         if decision and decision.lower() == "approve":
-            metrics["approved"] += 1
+            m["approved"] += 1
         else:
-            metrics["rejected"] += 1
-            
-        metrics["approval_rate"] = metrics["approved"] / metrics["total_reviewed"] * 100
+            m["rejected"] += 1
+        m["approval_rate"] = m["approved"] / m["total_reviewed"] * 100
         
-        with open(self.quality_metrics_file, 'w') as f:
-            json.dump(metrics, f, indent=2)
+        try:
+            file_metrics = self._load_json_file(self.quality_metrics_file, {
+                "total_reviewed": 0, "approved": 0, "rejected": 0, "approval_rate": 0.0
+            })
+            file_metrics["total_reviewed"] += 1
+            if decision and decision.lower() == "approve":
+                file_metrics["approved"] += 1
+            else:
+                file_metrics["rejected"] += 1
+            file_metrics["approval_rate"] = (
+                file_metrics["approved"] / file_metrics["total_reviewed"] * 100
+            )
+            with open(self.quality_metrics_file, 'w') as f:
+                json.dump(file_metrics, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not write quality metrics file: {e}")
     
     def _get_system_health(self) -> Dict[str, Any]:
         """Get system health metrics"""

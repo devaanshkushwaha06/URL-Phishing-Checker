@@ -222,6 +222,39 @@ async def get_feedback_statistics(authorization: str = Header(None)):
         logger.error(f"Error getting feedback statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@admin_router.get("/approved-dataset")
+async def get_approved_dataset(authorization: str = Header(None)):
+    """
+    Get approved feedback entries (from memory + CSV file)
+    """
+    await verify_admin_token(authorization)
+    
+    try:
+        from services.feedback_review_system import FeedbackReviewSystem
+        import os, pandas as pd
+        
+        # Start with in-memory approved entries
+        entries = list(FeedbackReviewSystem._memory_approved_dataset)
+        
+        # Also try reading from CSV file
+        try:
+            dataset_file = os.path.join(review_system.data_dir, "approved_feedback_dataset.csv")
+            if os.path.exists(dataset_file):
+                df = pd.read_csv(dataset_file)
+                file_entries = df.to_dict(orient='records')
+                existing_ids = {e.get('feedback_id') for e in entries}
+                for fe in file_entries:
+                    if fe.get('feedback_id') not in existing_ids:
+                        entries.append(fe)
+        except Exception as fe:
+            logger.warning(f"Could not read dataset CSV: {fe}")
+        
+        return {"count": len(entries), "entries": entries}
+    
+    except Exception as e:
+        logger.error(f"Error getting approved dataset: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @admin_router.get("/health")
 async def admin_system_health(authorization: str = Header(None)):
     """
