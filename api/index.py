@@ -404,13 +404,24 @@ async def submit_feedback(request: FeedbackRequest):
             'validation_notes': validation_result['validation_notes']
         })
         
-        # Save feedback — use review_system so admin dashboard can see it
+        # Save feedback via review_system so admin dashboard can see it.
+        # submit_user_feedback() creates the full struct (status, flagged_reasons, etc.)
+        # that PendingFeedbackResponse requires.
         if _review_system is not None:
-            _review_system._save_pending_feedback(feedback_data)
+            _review_system.submit_user_feedback(
+                url=request.url,
+                correct_label=request.correct_label,
+                user_comment=request.user_comment,
+                confidence_level=request.confidence_level,
+                user_expertise=request.user_expertise
+            )
         else:
-            # Fallback: save directly to class-level memory store
+            # Fallback: manually build a complete feedback dict
             try:
                 from services.feedback_review_system import FeedbackReviewSystem as _FRS
+                feedback_data['status'] = 'pending'
+                feedback_data.setdefault('flagged_reasons', [])
+                feedback_data.setdefault('auto_validation_result', None)
                 _FRS._memory_pending.append(feedback_data)
             except Exception as fe:
                 logger.warning(f"Could not save feedback to memory store: {fe}")
