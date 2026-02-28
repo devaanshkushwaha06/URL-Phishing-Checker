@@ -222,6 +222,41 @@ async def get_feedback_statistics(authorization: str = Header(None)):
         logger.error(f"Error getting feedback statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@admin_router.get("/debug")
+async def debug_info(authorization: str = Header(None)):
+    """
+    Debug endpoint: shows everything in memory and /tmp files
+    """
+    await verify_admin_token(authorization)
+    import os, tempfile
+    from services.feedback_review_system import FeedbackReviewSystem
+    
+    tmp_dir = os.path.join(tempfile.gettempdir(), 'phishing_data')
+    data_dir = review_system.data_dir
+    
+    def read_file(path):
+        try:
+            import json
+            if os.path.exists(path):
+                with open(path) as f:
+                    return json.load(f)
+            return f"FILE NOT FOUND: {path}"
+        except Exception as e:
+            return f"ERROR: {e}"
+    
+    return {
+        "data_dir": data_dir,
+        "memory_pending_count": len(FeedbackReviewSystem._memory_pending),
+        "memory_pending": FeedbackReviewSystem._memory_pending,
+        "memory_approved_count": len(FeedbackReviewSystem._memory_approved_dataset),
+        "memory_approved": FeedbackReviewSystem._memory_approved_dataset,
+        "memory_reviewed_count": len(FeedbackReviewSystem._memory_reviewed),
+        "memory_rejected_count": len(FeedbackReviewSystem._memory_rejected),
+        "memory_quality_metrics": FeedbackReviewSystem._memory_quality_metrics,
+        "file_pending": read_file(review_system.pending_file),
+        "file_reviewed": read_file(review_system.reviewed_file),
+    }
+
 @admin_router.get("/approved-dataset")
 async def get_approved_dataset(authorization: str = Header(None)):
     """

@@ -410,34 +410,39 @@ class FeedbackReviewSystem:
     
     def _add_to_training_dataset(self, feedback_data: Dict[str, Any]):
         """Add approved feedback to training dataset (memory + CSV file)"""
-        new_entry = {
-            'url': feedback_data['url'],
-            'label': feedback_data['correct_label'],
-            'source': 'user_feedback',
-            'feedback_id': feedback_data['feedback_id'],
-            'timestamp': feedback_data['timestamp']
-        }
-        
-        # Always store in class-level memory (works on Vercel)
-        existing_urls = {e['url'] for e in FeedbackReviewSystem._memory_approved_dataset}
-        if new_entry['url'] not in existing_urls:
-            FeedbackReviewSystem._memory_approved_dataset.append(new_entry)
-        
-        # Try writing to CSV file
         try:
-            dataset_file = os.path.join(self.data_dir, "approved_feedback_dataset.csv")
+            new_entry = {
+                'url': feedback_data.get('url', ''),
+                'label': feedback_data.get('correct_label', 0),
+                'source': 'user_feedback',
+                'feedback_id': feedback_data.get('feedback_id', ''),
+                'timestamp': feedback_data.get('timestamp', '')
+            }
             
-            if os.path.exists(dataset_file):
-                df = pd.read_csv(dataset_file)
-            else:
-                df = pd.DataFrame(columns=['url', 'label', 'source', 'feedback_id', 'timestamp'])
+            # Always store in class-level memory first (reliable on Vercel)
+            existing_urls = {e.get('url') for e in FeedbackReviewSystem._memory_approved_dataset}
+            if new_entry['url'] not in existing_urls:
+                FeedbackReviewSystem._memory_approved_dataset.append(new_entry)
+                logger.info(f"Added to memory approved dataset: {new_entry['feedback_id']}")
             
-            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
-            df = df.drop_duplicates(subset=['url'], keep='last')
-            df.to_csv(dataset_file, index=False)
-            logger.info(f"Added feedback to training dataset CSV: {feedback_data['feedback_id']}")
+            # Try writing to CSV file
+            try:
+                dataset_file = os.path.join(self.data_dir, "approved_feedback_dataset.csv")
+                
+                if os.path.exists(dataset_file):
+                    df = pd.read_csv(dataset_file)
+                else:
+                    df = pd.DataFrame(columns=['url', 'label', 'source', 'feedback_id', 'timestamp'])
+                
+                df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+                df = df.drop_duplicates(subset=['url'], keep='last')
+                df.to_csv(dataset_file, index=False)
+                logger.info(f"Added feedback to training dataset CSV: {new_entry['feedback_id']}")
+            except Exception as e:
+                logger.warning(f"Could not write to dataset CSV (saved in memory): {e}")
+        
         except Exception as e:
-            logger.warning(f"Could not write to dataset CSV (saved in memory): {e}")
+            logger.error(f"Error in _add_to_training_dataset: {e}")
     
     def _log_feedback_submission(self, feedback_data: Dict[str, Any]):
         """Log feedback submission"""

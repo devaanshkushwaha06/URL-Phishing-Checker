@@ -367,6 +367,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- Approved Dataset Panel -->
+        <div class="feedback-panel" style="margin-top:2rem;">
+            <div class="panel-header">
+                <h2 class="panel-title">✅ Approved Dataset</h2>
+                <button onclick="loadApprovedDataset()" class="refresh-btn">Refresh</button>
+            </div>
+            <div id="approved-count" style="color:#51cf66;font-weight:bold;margin-bottom:1rem;">Loading...</div>
+            <div id="approved-container" style="overflow-x:auto;">
+                <div class="loading">Loading approved entries...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -393,6 +405,7 @@
             
             loadDashboardData();
             loadPendingFeedback();
+            loadApprovedDataset();
             
             // Refresh every 30 seconds
             setInterval(loadDashboardData, 30000);
@@ -582,6 +595,52 @@
             }
         }
 
+        async function loadApprovedDataset() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/approved-dataset`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.status === 401) { handleAuthError(); return; }
+                if (!response.ok) throw new Error('Failed to load approved dataset');
+                const data = await response.json();
+                const entries = data.entries || [];
+                document.getElementById('approved-count').textContent =
+                    `${entries.length} approved URL${entries.length !== 1 ? 's' : ''} in dataset`;
+                const container = document.getElementById('approved-container');
+                if (entries.length === 0) {
+                    container.innerHTML = '<p style="color:#888;">No approved entries yet.</p>';
+                    return;
+                }
+                const rows = entries.map(e => `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:8px;word-break:break-all;max-width:400px;">${e.url || '-'}</td>
+                        <td style="padding:8px;text-align:center;">
+                            <span style="color:${e.label == 1 ? '#ff6b6b' : '#51cf66'};font-weight:bold;">
+                                ${e.label == 1 ? '🚨 Phishing' : '✅ Legitimate'}
+                            </span>
+                        </td>
+                        <td style="padding:8px;color:#888;font-size:0.85rem;">${e.feedback_id || '-'}</td>
+                        <td style="padding:8px;color:#888;font-size:0.85rem;">${e.timestamp ? new Date(e.timestamp).toLocaleString() : '-'}</td>
+                    </tr>`).join('');
+                container.innerHTML = `
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f8f9fa;text-align:left;">
+                                <th style="padding:8px;">URL</th>
+                                <th style="padding:8px;text-align:center;">Label</th>
+                                <th style="padding:8px;">Feedback ID</th>
+                                <th style="padding:8px;">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>`;
+            } catch (error) {
+                console.error('Error loading approved dataset:', error);
+                document.getElementById('approved-container').innerHTML =
+                    '<p style="color:#ff6b6b;">Error loading approved dataset.</p>';
+            }
+        }
+
         async function reviewFeedback(feedbackId, decision, adminComment = '') {
             try {
                 const response = await fetch(`${API_BASE_URL}/admin/review-feedback`, {
@@ -616,6 +675,7 @@
                 
                 // Refresh data
                 loadDashboardData();
+                if (decision === 'approve') loadApprovedDataset();
                 
                 // Show notification
                 showNotification(`Feedback ${decision}d successfully`, 'success');
