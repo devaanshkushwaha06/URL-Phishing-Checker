@@ -5,6 +5,8 @@ Purpose: Secure authentication system for admin access with environment-based co
 
 import os
 import hashlib
+import hmac
+import base64
 import secrets
 import time
 from datetime import datetime, timedelta
@@ -18,6 +20,14 @@ logger = logging.getLogger(__name__)
 class AdminAuthService:
     """Secure admin authentication service"""
     
+    # Class-level session store — shared across all instances in the same process.
+    # This works as a reliable fallback on Vercel where each request can hit the
+    # same warm instance but a different AdminAuthService object would otherwise
+    # have an empty active_sessions dict.
+    _class_sessions: Dict[str, Any] = {}
+    # Class-level revocation set for logout
+    _revoked_tokens: set = set()
+    
     def __init__(self, config_file: str = "admin_config.env"):
         # Resolve config path: prefer project root (two levels up from services/)
         if not os.path.isabs(config_file):
@@ -25,7 +35,8 @@ class AdminAuthService:
             config_file = os.path.join(project_root, config_file)
         self.config_file = config_file
         self.failed_attempts = {}  # username -> {count, last_attempt}
-        self.active_sessions = {}  # token -> {username, expiry}
+        # Bind to class-level dict so all instances share the same session store
+        self.active_sessions = AdminAuthService._class_sessions
         self.login_logs = []
         
         # Load configuration
@@ -75,7 +86,9 @@ class AdminAuthService:
             logger.info("Using built-in default password")
         
         if 'ADMIN_TOKEN_SECRET' not in config:
-            config['ADMIN_TOKEN_SECRET'] = secrets.token_urlsafe(32)
+            # Use a stable hardcoded default so tokens are verifiable across Vercel instances
+            config['ADMIN_TOKEN_SECRET'] = 'phishing-admin-secret-key-2026-stable'
+            logger.info("Using built-in default token secret")
         
         logger.info(f"Admin auth configured for user: {config.get('ADMIN_USERNAME')}")
         return config
@@ -136,46 +149,71 @@ class AdminAuthService:
     
     def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
         """
-        Validate session token
-        
-        Args:
-            token: Session token to validate
-            
-        Returns:
-            Dict with user info if valid, None if invalid
+        Validate session token — stateless HMAC verification.
+        No dict lookup needed so works across Vercel instances.
         """
-        
-        if not token or token not in self.active_sessions:
+        if not token:
             return None
         
-        session = self.active_sessions[token]
-        
-        # Check if session has expired
-        if datetime.now() > session['expiry']:
-            del self.active_sessions[token]
+        # Check revocation list first
+        if token in AdminAuthService._revoked_tokens:
             return None
         
-        # Update last access time
-        session['last_access'] = datetime.now()
-        
-        return {
-            'username': session['username'],
-            'token': token,
-            'expires': session['expiry'].isoformat()
-        }
+        try:
+            # Token format: base64url(username:expiry_ts):hmac_signature
+            last_colon = token.rfind(':')
+            if last_colon == -1:
+                # Legacy dict-based token fallback
+                if token in self.active_sessions:
+                    session = self.active_sessions[token]
+                    if datetime.now() <= session['expiry']:
+                        return {'username': session['username'], 'token': token,
+                                'expires': session['expiry'].isoformat()}
+                return None
+            
+            encoded_payload = token[:last_colon]
+            provided_sig = token[last_colon + 1:]
+            
+            # Verify HMAC signature
+            secret = self.config.get('ADMIN_TOKEN_SECRET', 'phishing-admin-secret-key-2026-stable')
+            expected_sig = hmac.new(
+                secret.encode(), encoded_payload.encode(), hashlib.sha256
+            ).hexdigest()
+            
+            if not secrets.compare_digest(provided_sig, expected_sig):
+                return None
+            
+            # Decode payload
+            payload = base64.urlsafe_b64decode(
+                encoded_payload + '==' * (4 - len(encoded_payload) % 4)
+            ).decode()
+            username, expiry_ts_str = payload.rsplit(':', 1)
+            expiry_ts = int(expiry_ts_str)
+            
+            # Check expiry
+            if int(time.time()) > expiry_ts:
+                return None
+            
+            return {
+                'username': username,
+                'token': token,
+                'expires': datetime.fromtimestamp(expiry_ts).isoformat()
+            }
+        except Exception as e:
+            logger.warning(f"Token validation error: {e}")
+            return None
     
     def revoke_token(self, token: str) -> bool:
-        """Revoke a session token (logout)"""
+        """Revoke a session token (logout) — adds to class-level revocation set"""
+        AdminAuthService._revoked_tokens.add(token)
+        # Also remove from legacy dict if present
         if token in self.active_sessions:
             username = self.active_sessions[token]['username']
             del self.active_sessions[token]
-            
             if self.enable_logging:
                 self._log_authentication_attempt(username, True, "Logout")
-            
             logger.info(f"Session token revoked for user '{username}'")
-            return True
-        return False
+        return True
     
     def _validate_credentials(self, username: str, password: str) -> bool:
         """Validate username and password against configuration"""
@@ -224,28 +262,22 @@ class AdminAuthService:
         logger.warning(f"Failed login attempt for '{username}' (attempt {self.failed_attempts[username]['count']})")
     
     def _generate_session_token(self, username: str) -> str:
-        """Generate a secure session token"""
-        # Create token data
-        token_data = {
-            'username': username,
-            'timestamp': int(time.time()),
-            'random': secrets.token_urlsafe(16)
-        }
+        """Generate a stateless HMAC-signed session token verifiable without dict lookup"""
+        expiry_ts = int((datetime.now() + timedelta(seconds=self.session_timeout)).timestamp())
+        payload = f"{username}:{expiry_ts}"
+        encoded_payload = base64.urlsafe_b64encode(payload.encode()).decode().rstrip('=')
         
-        # Generate hash-based token
-        token_string = f"{token_data['username']}-{token_data['timestamp']}-{token_data['random']}"
-        secret = self.config.get('ADMIN_TOKEN_SECRET')
+        secret = self.config.get('ADMIN_TOKEN_SECRET', 'phishing-admin-secret-key-2026-stable')
+        signature = hmac.new(secret.encode(), encoded_payload.encode(), hashlib.sha256).hexdigest()
         
-        # Create HMAC-like token
-        token_hash = hashlib.sha256(f"{token_string}-{secret}".encode()).hexdigest()
-        final_token = f"{secrets.token_urlsafe(16)}-{token_hash[:32]}"
+        final_token = f"{encoded_payload}:{signature}"
         
-        # Store session
-        expiry = datetime.now() + timedelta(seconds=self.session_timeout)
-        self.active_sessions[final_token] = {
+        # Also store in class-level dict for backward compatibility / quick lookup
+        expiry_dt = datetime.fromtimestamp(expiry_ts)
+        AdminAuthService._class_sessions[final_token] = {
             'username': username,
             'created': datetime.now(),
-            'expiry': expiry,
+            'expiry': expiry_dt,
             'last_access': datetime.now()
         }
         
